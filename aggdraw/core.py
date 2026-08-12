@@ -296,7 +296,7 @@ class Draw():
         when defining the :obj:`aggdraw.Path`). To draw a path at a specific location on
         the surface, see :meth:`~aggdraw.Draw.symbol`.
 
-        Args
+        Args:
             path (:obj:`aggdraw.Path`): The Path object to draw.
             pen (:obj:`aggdraw.Pen`, optional): A pen to use for drawing an outline
                 around the path.
