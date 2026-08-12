@@ -285,15 +285,18 @@ class Draw():
             pen = pen._pen
         self._draw.line(xy, pen)
 
-    def path(self, xy, path, pen=None, brush=None):
-        """Draws a path at the given positions.
+    def path(self, path, pen=None, brush=None):
+        """Draws a path to the surface.
         
         If a brush is given, it is used to fill the path. If a pen is given,
         it is used to draw an outline around the path. Either one (or both)
         can be left out.
 
-        Args:
-            xy: A Python sequence in the format (x, y, x, y, ...)
+        This method draws the path without translation (using the coordinates specified
+        when defining the :obj:`aggdraw.Path`). To draw a path at a specific location on
+        the surface, see :meth:`~aggdraw.Draw.symbol`.
+
+        Args
             path (:obj:`aggdraw.Path`): The Path object to draw.
             pen (:obj:`aggdraw.Pen`, optional): A pen to use for drawing an outline
                 around the path.
@@ -302,7 +305,7 @@ class Draw():
         
         """
         brush, pen = self._parse_args(brush, pen)
-        self._draw.path(xy, path._path, brush, pen)
+        self._draw.path(path._path, brush, pen)
 
     def pieslice(self, xy, start, end, pen=None, brush=None):
         """Draws a pie slice.
@@ -419,9 +422,12 @@ class Draw():
         it is used to draw an outline around the symbol. Either one (or both)
         can be left out.
 
+        This method can be used to draw both :obj:`aggdraw.Symbol` or
+        :obj:`aggdraw.Path` objects.
+
         Args:
             xy: A Python sequence in the format (x, y, x, y, ...)
-            symbol (:obj:`aggdraw.Symbol`): The Symbol object to draw.
+            symbol (:obj:`aggdraw.Symbol`): The Symbol (or Path) object to draw.
             pen (:obj:`aggdraw.Pen`, optional): A pen to use for drawing an outline
                 around the symbol.
             brush (:obj:`aggdraw.Brush`, optional): A brush to use for filling

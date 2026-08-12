@@ -130,7 +130,7 @@ def test_path():
     draw.line(p)
     draw.polygon(p)
     draw.symbol((0, 0), p)
-
+    draw.path(p)
 
 def test_symbol():
     from aggdraw import Symbol
