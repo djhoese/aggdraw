@@ -132,6 +132,7 @@ def test_path():
     draw.symbol((0, 0), p)
     draw.path(p)
 
+
 def test_symbol():
     from aggdraw import Symbol
     Symbol("M0,0L0,0L0,0L0,0Z")
