@@ -4,9 +4,12 @@ import aggdraw._aggdraw as _aggdraw
 class Brush():
     """Creates a brush object.
 
-    The brush color can be an RGB tuple (e.g. `(255, 255, 255)`), a string specifying a
-    basic HTML color (e.g. "black", "blue", "yellow") or RGB hex code (e.g. "#FFFF00"),
-    or an integer from 0 to 255 specifying a shade of grey.
+    Brush objects define a fill color to use for drawing closed shapes with the
+    :obj:`aggdraw.Draw` class.
+
+    The brush color can be an RGB tuple (e.g. ``(255, 255, 255)``), a string specifying
+    a basic HTML color or RGB hex code (e.g. ``"black"``, ``"blue"``, ``"#FFFF00"``), or
+    an integer from 0 to 255 specifying a shade of grey.
     
     Args:
         color: The brush color.
@@ -21,9 +24,23 @@ class Brush():
 class Pen():
     """Creates a pen object.
 
-    The pen color can be an RGB tuple (e.g. `(255, 255, 255)`), a string specifying a
-    basic HTML color (e.g. "black", "blue", "yellow") or RGB hex code (e.g. "#FFFF00"),
-    or an integer from 0 to 255 specifying a shade of grey.
+    Pen objects define a line color and width to use for drawing lines, paths, and shape
+    outlines with the :obj:`aggdraw.Draw` class.
+
+    The pen color can be an RGB tuple (e.g. ``(255, 255, 255)``), a string specifying
+    a basic HTML color or RGB hex code (e.g. ``"black"``, ``"blue"``, ``"#FFFF00"``), or
+    an integer from 0 to 255 specifying a shade of grey.
+
+    Note that the width of a Pen extends equally on either side of the drawn path. This
+    means that if drawing using a Pen with an odd width (e.g. 1, 3, 5) you may want to
+    align your coordinates to the middle of the target pixels to avoid aliasing::
+
+       surface = Draw("RGB", (100, 100), "white")
+       outline = Pen("black", width=1)
+       # Results in a 2-pixel-wide grey outline
+       surface.rectangle((2, 2, 10, 10), pen=outline)
+       # Results in a 1-pixel-wide black outline
+       surface.rectangle((2.5, 2.5, 10.5, 10.5), pen=outline)
     
     Args:
         color: The pen color.
@@ -39,12 +56,12 @@ class Pen():
 class Font():
     """Creates a font object.
 
-    This creates a font object for use with :meth:`aggdraw.Draw.text` and
+    This creates a font object for use with :meth:`~aggdraw.Draw.text` and
     :meth:`aggdraw.Draw.textsize` from a TrueType font file.
 
-    The font color can be an RGB tuple (e.g. `(255, 255, 255)`), a string specifying a
-    basic HTML color (e.g. "black", "blue", "yellow") or RGB hex code (e.g. "#FFFF00"),
-    or an integer from 0 to 255 specifying a shade of grey.
+    The font color can be an RGB tuple (e.g. ``(255, 255, 255)``), a string specifying
+    a basic HTML color or RGB hex code (e.g. ``"black"``, ``"blue"``, ``"#FFFF00"``), or
+    an integer from 0 to 255 specifying a shade of grey.
     
     Args:
         color: The font color.
