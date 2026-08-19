@@ -4,8 +4,9 @@ import aggdraw._aggdraw as _aggdraw
 class Brush():
     """Creates a brush object.
 
-    The brush color can be an RGB tuple (e.g. `(255, 255, 255)`), a CSS-style color
-    name, or a color integer (0xAARRGGBB).
+    The brush color can be an RGB tuple (e.g. `(255, 255, 255)`), a string specifying a
+    basic HTML color (e.g. "black", "blue", "yellow") or RGB hex code (e.g. "#FFFF00"),
+    or an integer from 0 to 255 specifying a shade of grey.
     
     Args:
         color: The brush color.
@@ -20,8 +21,9 @@ class Brush():
 class Pen():
     """Creates a pen object.
 
-    The pen color can be a color tuple (e.g. `(255, 255, 255)`), a CSS-style color
-    name, or a color integer (0xAARRGGBB).
+    The pen color can be an RGB tuple (e.g. `(255, 255, 255)`), a string specifying a
+    basic HTML color (e.g. "black", "blue", "yellow") or RGB hex code (e.g. "#FFFF00"),
+    or an integer from 0 to 255 specifying a shade of grey.
     
     Args:
         color: The pen color.
@@ -40,8 +42,9 @@ class Font():
     This creates a font object for use with :meth:`aggdraw.Draw.text` and
     :meth:`aggdraw.Draw.textsize` from a TrueType font file.
 
-    The font color can be a color tuple (e.g. `(255, 255, 255)`), a CSS-style color
-    name, or a color integer (0xAARRGGBB).
+    The font color can be an RGB tuple (e.g. `(255, 255, 255)`), a string specifying a
+    basic HTML color (e.g. "black", "blue", "yellow") or RGB hex code (e.g. "#FFFF00"),
+    or an integer from 0 to 255 specifying a shade of grey.
     
     Args:
         color: The font color.
