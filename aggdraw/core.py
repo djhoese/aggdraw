@@ -5,7 +5,7 @@ class Brush():
     """Creates a brush object.
 
     Brush objects define a fill color to use for drawing closed shapes with the
-    :obj:`aggdraw.Draw` class.
+    :class:`aggdraw.Draw` class.
 
     The brush color can be an RGB tuple (e.g. ``(255, 255, 255)``), a string specifying
     a basic HTML color or RGB hex code (e.g. ``"black"``, ``"blue"``, ``"#FFFF00"``), or
@@ -25,7 +25,7 @@ class Pen():
     """Creates a pen object.
 
     Pen objects define a line color and width to use for drawing lines, paths, and shape
-    outlines with the :obj:`aggdraw.Draw` class.
+    outlines with the :class:`aggdraw.Draw` class.
 
     The pen color can be an RGB tuple (e.g. ``(255, 255, 255)``), a string specifying
     a basic HTML color or RGB hex code (e.g. ``"black"``, ``"blue"``, ``"#FFFF00"``), or
