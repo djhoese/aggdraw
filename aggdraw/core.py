@@ -129,10 +129,10 @@ class Path():
     def close(self):
         """Closes the current path.
 
-        This method connects the current point in the path back to the first
-        point in the path.
-
-        Note that this may not work as expected if there are any gaps in the path.
+        This method adds a line segment connecting the end of the current segment to
+        the start of the path. If the path position has been moved at any point by
+        :meth:`moveto` or :meth:`rmoveto`, the current segment will instead be connected
+        to the start of the first segment since the path position was last moved.
 
         """
         self._path.close()
