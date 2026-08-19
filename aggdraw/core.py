@@ -108,19 +108,33 @@ class Symbol():
 class Path():
     """Path factory.
 
-    This creates a path object for use with :meth:`aggdraw.Draw.path`.
+    Path objects allow you to define custom paths and shapes that can be drawn with
+    :meth:`aggdraw.Draw.path` or :meth:`aggdraw.Draw.symbol`.
+
+    Paths are created sequentially, with each new line and curve segment connected to
+    the end of the previous segment (unless the current path position is changed
+    manually using :meth:`~aggdraw.Path.moveto` or :meth:`~aggdraw.Path.rmoveto`).
+
+    Args:
+        path (list): A Python sequence in the format (x, y, x, y, ...) defining an
+            initial set of connected line segments with which to initialize the path.
 
     """
     def __init__(self, path=None):
-        # NOTE: 'path' param is undocumented but defines a initial set
-        # of points to connect with lines
         if path:
             self._path = _aggdraw.Path(path)
         else:
             self._path = _aggdraw.Path()
 
     def close(self):
-        """Closes the current path."""
+        """Closes the current path.
+
+        This method connects the current point in the path back to the first
+        point in the path.
+
+        Note that this may not work as expected if there are any gaps in the path.
+
+        """
         self._path.close()
 
     def coords(self):
@@ -135,19 +149,52 @@ class Path():
         return self._path.coords()
 
     def curveto(self, x1, y1, x2, y2, x, y):
-        """Adds a bezier curve segment to the path."""
+        """Adds a cubic bezier curve segment to the path.
+        
+        The added curve will be between the path's current position and the specified
+        endpoint.
+
+        Args:
+            x1 (float): The x coordinate of the curve's first control point.
+            y1 (float): The y coordinate of the curve's first control point.
+            x2 (float): The x coordinate of the curve's second control point.
+            y2 (float): The y coordinate of the curve's second control point.
+            x (float): The x coordinate of the curve's endpoint.
+            y (float): The y coordinate of the curve's endpoint.
+
+        """
+        # NOTE: Could add support for quadratic beziers too by making x2/y2 optional
         self._path.curveto(x1, y1, x2, y2, x, y)
 
     def lineto(self, x, y):
-        """Adds a line segment to the path."""
+        """Adds a line segment to the path.
+
+        The added line will be between the path's current position and the specified
+        endpoint.
+
+        Args:
+            x (float): The x coordinate of the line's endpoint.
+            y (float): The y coordinate of the line's endpoint.
+
+        """
         self._path.lineto(x, y)
 
     def moveto(self, x, y):
-        """Moves the path pointer to the given location."""
+        """Moves the path position to the given location.
+        
+        Moving the path position will change the start point of the next segment added
+        to the path without adding a new segment, creating a gap between the previous
+        segment and the next.
+        
+        Args:
+            x (float): The x coordinate of the new path position.
+            y (float): The y coordinate of the new path position.
+
+        """
         self._path.moveto(x, y)
 
     def rcurveto(self, x1, y1, x2, y2, x, y):
-        """Adds a bezier curve segment to the path using relative coordinates.
+        """Adds a cubic bezier curve segment to the path using relative coordinates.
         
         Same as :meth:`~curveto`, but the coordinates are relative to the current
         position.
@@ -165,7 +212,16 @@ class Path():
         self._path.rlineto(x, y)
 
     def rmoveto(self, x, y):
-        """Moves the path pointer relative to the current position."""
+        """Moves the path position relative to the current position.
+
+        For example, if the current path position was (10, 10), calling
+        ``p.rmoveto(-5, 5)`` would change the current position to (5, 15).
+
+        Args:
+            x (float): The change in x coordinates relative to the current position.
+            y (float): The change in y coordinates relative to the current position.
+
+        """
         self._path.rmoveto(x, y)
 
 
