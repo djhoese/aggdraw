@@ -1,4 +1,10 @@
+from PIL import Image
 import pytest
+
+
+def _to_image(draw):
+    im = Image.frombytes(draw.mode, draw.size, draw.tobytes())
+    return im
 
 
 def test_module_init():
@@ -39,10 +45,10 @@ def test_flush():
 
 
 def test_pen():
-    from aggdraw import Pen
+    from aggdraw import Pen, Draw
     Pen("black")
     Pen("black", 1)
-    Pen("black", 1.5)
+    Pen("black", width=1.5)
     Pen("black", 1, opacity=128)
 
     Pen(0)
@@ -50,9 +56,35 @@ def test_pen():
     Pen("rgb(0,0,0)")
     Pen("gold")
 
+    # Check that pens work as expected
+    pens = {
+        "black": Pen("black", 1),
+        "red": Pen((255, 0, 0), 5),
+        "black_50": Pen((0, 0, 0), 3, opacity=128),
+        "crimson": Pen("#DC143C", 3)
+    }
+    surf = Draw("RGB", (50, 50), "white")
+    surf.line((1, 1.5, 50, 1.5), pen=pens["black"])
+    surf.line((1, 10.5, 50, 10.5), pen=pens["red"])
+    surf.line((1, 20.5, 50, 20.5), pen=pens["black_50"])
+    surf.line((1, 30.5, 50, 30.5), pen=pens["crimson"])
+    im = _to_image(surf)
+    assert im.getpixel((1, 1)) == (0, 0, 0)
+    assert im.getpixel((1, 10)) == (255, 0, 0)
+    assert im.getpixel((1, 20)) == (127, 127, 127)
+    assert im.getpixel((1, 30)) == (220, 20, 60)
+    # Check widths of lines
+    assert im.getpixel((1, 8)) == (255, 0, 0)
+    assert im.getpixel((1, 12)) == (255, 0, 0)
+    assert im.getpixel((1, 21)) == (127, 127, 127)
+    # Check outside of lines to make sure it's white
+    non_line = [(0, 1), (1, 0), (1, 2), (2, 7), (20, 13)]
+    for loc in non_line:
+        assert im.getpixel(loc) == (255, 255, 255)
+
 
 def test_brush():
-    from aggdraw import Brush
+    from aggdraw import Brush, Draw
     Brush("black")
     Brush("black", opacity=128)
 
@@ -61,6 +93,23 @@ def test_brush():
     Brush("rgb(0, 0, 0)")
     Brush("gold")
 
+    # Check that brushes work as expected
+    brushes = {
+        "black": Brush("black"),
+        "red": Brush((255, 0, 0)),
+        "black_50": Brush((0, 0, 0), opacity=128),
+        "crimson": Brush("#DC143C")
+    }
+    surf = Draw("RGB", (100, 100), "white")
+    surf.rectangle((0, 0, 50, 50), brush=brushes["black"])
+    surf.rectangle((50, 0, 100, 50), brush=brushes["red"])
+    surf.rectangle((0, 50, 50, 100), brush=brushes["black_50"])
+    surf.rectangle((50, 50, 100, 100), brush=brushes["crimson"])
+    im = _to_image(surf)
+    assert im.getpixel((1, 1)) == (0, 0, 0)
+    assert im.getpixel((51, 1)) == (255, 0, 0)
+    assert im.getpixel((1, 51)) == (127, 127, 127)
+    assert im.getpixel((51, 51)) == (220, 20, 60)
 
 def test_graphics():
     from aggdraw import Draw, Pen, Brush
