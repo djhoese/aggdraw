@@ -411,13 +411,21 @@ class Draw():
         it is used to draw an outline around the polygon. Either one (or both)
         can be left out.
 
+        A sequence of coordinates is always closed, so the outline includes a
+        segment joining the last point back to the first. A
+        :class:`aggdraw.Path` is drawn exactly as it was defined instead: it
+        is closed only where :meth:`~aggdraw.Path.close` was called on it, and
+        is otherwise left open. This only affects the outline drawn by a pen,
+        as filling with a brush closes the shape either way.
+
         Args:
-            xy: A Python sequence (x, y, x, y, ...).
+            xy: A Python sequence (x, y, x, y, ...) or an
+                :class:`aggdraw.Path`.
             pen (:class:`aggdraw.Pen`, optional): A pen to use for drawing an outline
                 around the polygon.
             brush (:class:`aggdraw.Brush`, optional): A brush to use for filling
                 the polygon.
-        
+
         """
         if isinstance(xy, Path):
             xy = xy._path

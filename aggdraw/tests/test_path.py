@@ -1,9 +1,7 @@
 import aggdraw
 import pytest
-from PIL import Image
 
-
-WHITE = (255, 255, 255)
+from aggdraw.tests._helpers import WHITE, ink_count, to_image
 
 # The Draw methods that accept a Path
 DRAW_METHODS = ["line", "polygon", "symbol", "path"]
@@ -75,13 +73,13 @@ def test_path_close_erases_degenerate_subpath():
     # already added by lineto with it. This is a "bug" in upstream AGG C++.
     p = aggdraw.Path([10.0, 10.0, 90.0, 10.0])
     coords = p.coords()
-    assert _ink_count(_render(p)) > 0
+    assert ink_count(_render(p)) > 0
 
     p.close()
     # close() sets a flag rather than appending a vertex, so the coordinates
     # are unchanged and only the rendered pixels reveal what happened
     assert p.coords() == coords
-    assert _ink_count(_render(p)) == 0
+    assert ink_count(_render(p)) == 0
 
 
 def test_path_curveto():
@@ -148,7 +146,7 @@ def test_path_rmoveto():
 @pytest.mark.parametrize("method", DRAW_METHODS)
 def test_path_draw(method):
     im = _draw_with(method, _sample_path(), aggdraw.Pen("black", width=1))
-    assert _ink_count(im) > 0
+    assert ink_count(im) > 0
     # The top edge of the path is drawn (antialiased, so not pure black)
     assert im.getpixel((50, 10)) != WHITE
     # A point well away from the path is left alone
@@ -159,22 +157,7 @@ def test_path_draw(method):
 def test_path_draw_without_pen(method):
     # Drawing without a pen is allowed and simply draws nothing
     im = _draw_with(method, _sample_path())
-    assert _ink_count(im) == 0
-
-
-def _to_image(draw):
-    return Image.frombytes(draw.mode, draw.size, draw.tobytes())
-
-
-def _ink_count(im):
-    """Count the pixels in an image that aren't the white background."""
-    width, height = im.size
-    return sum(
-        1
-        for y in range(height)
-        for x in range(width)
-        if im.getpixel((x, y)) != WHITE
-    )
+    assert ink_count(im) == 0
 
 
 def _render(path):
@@ -186,7 +169,7 @@ def _render(path):
     """
     draw = aggdraw.Draw("RGB", (100, 100), "white")
     draw.path(path, aggdraw.Pen("black", 1))
-    return _to_image(draw)
+    return to_image(draw)
 
 
 def _draw_with(method, path, pen=None):
@@ -200,7 +183,7 @@ def _draw_with(method, path, pen=None):
         draw.symbol((0, 0), path, pen)
     else:
         getattr(draw, method)(path, pen)
-    return _to_image(draw)
+    return to_image(draw)
 
 
 def _sample_path():
