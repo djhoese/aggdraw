@@ -276,7 +276,7 @@ class Draw():
                 given first.
             start (float): The start angle of the arc.
             end (float): The end angle of the arc.
-            pen (:obj:`aggdraw.Pen`, optional): A pen to use for drawing the arc.
+            pen (:class:`aggdraw.Pen`, optional): A pen to use for drawing the arc.
 
         """
         # NOTE: Why is pen optional?
@@ -296,9 +296,9 @@ class Draw():
                 given first.
             start (float): The start angle of the chord.
             end (float): The end angle of the chord.
-            pen (:obj:`aggdraw.Pen`, optional): A pen to use for drawing an outline
+            pen (:class:`aggdraw.Pen`, optional): A pen to use for drawing an outline
                 around the chord.
-            brush (:obj:`aggdraw.Brush`, optional): A brush to use for filling
+            brush (:class:`aggdraw.Brush`, optional): A brush to use for filling
                 the chord.
         
         """
@@ -317,9 +317,9 @@ class Draw():
         Args:
             xy: A bounding rectangle as a 4-element Python sequence (x, y, x, y),
                 with the upper-left corner given first.
-            pen (:obj:`aggdraw.Pen`, optional): A pen to use for drawing an outline
+            pen (:class:`aggdraw.Pen`, optional): A pen to use for drawing an outline
                 around the ellipse.
-            brush (:obj:`aggdraw.Brush`, optional): A brush to use for filling
+            brush (:class:`aggdraw.Brush`, optional): A brush to use for filling
                 the ellipse.
         
         """
@@ -352,7 +352,7 @@ class Draw():
 
         Args:
             xy: A Python sequence in the format (x, y, x, y, ...)
-            pen (:obj:`aggdraw.Pen`, optional): A pen to use for drawing the line.
+            pen (:class:`aggdraw.Pen`, optional): A pen to use for drawing the line.
 
         """
         if isinstance(xy, Path):
@@ -369,14 +369,14 @@ class Draw():
         can be left out.
 
         This method draws the path without translation (using the coordinates specified
-        when defining the :obj:`aggdraw.Path`). To draw a path at a specific location on
+        when defining the :class:`aggdraw.Path`). To draw a path at a specific location on
         the surface, see :meth:`~aggdraw.Draw.symbol`.
 
         Args:
-            path (:obj:`aggdraw.Path`): The Path object to draw.
-            pen (:obj:`aggdraw.Pen`, optional): A pen to use for drawing an outline
+            path (:class:`aggdraw.Path`): The Path object to draw.
+            pen (:class:`aggdraw.Pen`, optional): A pen to use for drawing an outline
                 around the path.
-            brush (:obj:`aggdraw.Brush`, optional): A brush to use for filling
+            brush (:class:`aggdraw.Brush`, optional): A brush to use for filling
                 the path.
         
         """
@@ -395,9 +395,9 @@ class Draw():
                 given first.
             start (float): The start angle of the pie slice.
             end (float): The end angle of the pie slice.
-            pen (:obj:`aggdraw.Pen`, optional): A pen to use for drawing an outline
+            pen (:class:`aggdraw.Pen`, optional): A pen to use for drawing an outline
                 around the pie slice.
-            brush (:obj:`aggdraw.Brush`, optional): A brush to use for filling
+            brush (:class:`aggdraw.Brush`, optional): A brush to use for filling
                 the pie slice.
         
         """
@@ -413,9 +413,9 @@ class Draw():
 
         Args:
             xy: A Python sequence (x, y, x, y, ...).
-            pen (:obj:`aggdraw.Pen`, optional): A pen to use for drawing an outline
+            pen (:class:`aggdraw.Pen`, optional): A pen to use for drawing an outline
                 around the polygon.
-            brush (:obj:`aggdraw.Brush`, optional): A brush to use for filling
+            brush (:class:`aggdraw.Brush`, optional): A brush to use for filling
                 the polygon.
         
         """
@@ -434,9 +434,9 @@ class Draw():
         Args:
             xy: A 4-element Python sequence (x, y, x, y), with the upper left corner
                 given first.
-            pen (:obj:`aggdraw.Pen`, optional): A pen to use for drawing an outline
+            pen (:class:`aggdraw.Pen`, optional): A pen to use for drawing an outline
                 around the rectangle.
-            brush (:obj:`aggdraw.Brush`, optional): A brush to use for filling
+            brush (:class:`aggdraw.Brush`, optional): A brush to use for filling
                 the rectangle.
         
         """
@@ -454,9 +454,9 @@ class Draw():
             xy: A 4-element Python sequence (x, y, x, y), with the upper left corner
                 given first.
             radius (float): The corner radius.
-            pen (:obj:`aggdraw.Pen`, optional): A pen to use for drawing an outline
+            pen (:class:`aggdraw.Pen`, optional): A pen to use for drawing an outline
                 around the rectangle.
-            brush (:obj:`aggdraw.Brush`, optional): A brush to use for filling
+            brush (:class:`aggdraw.Brush`, optional): A brush to use for filling
                 the rectangle.
         
         """
@@ -498,15 +498,15 @@ class Draw():
         it is used to draw an outline around the symbol. Either one (or both)
         can be left out.
 
-        This method can be used to draw both :obj:`aggdraw.Symbol` or
-        :obj:`aggdraw.Path` objects.
+        This method can be used to draw both :class:`aggdraw.Symbol` or
+        :class:`aggdraw.Path` objects.
 
         Args:
             xy: A Python sequence in the format (x, y, x, y, ...)
-            symbol (:obj:`aggdraw.Symbol`): The Symbol (or Path) object to draw.
-            pen (:obj:`aggdraw.Pen`, optional): A pen to use for drawing an outline
+            symbol (:class:`aggdraw.Symbol`, :class:`aggdraw.Path`): The Symbol (or Path) object to draw.
+            pen (:class:`aggdraw.Pen`, optional): A pen to use for drawing an outline
                 around the symbol.
-            brush (:obj:`aggdraw.Brush`, optional): A brush to use for filling
+            brush (:class:`aggdraw.Brush`, optional): A brush to use for filling
                 the symbol.
         
         """
@@ -523,7 +523,7 @@ class Draw():
         Args:
             xy: A 2-element Python sequence (x, y).
             text (str): A string of text to render.
-            font (:obj:`aggdraw.Font`): The font object to render with.
+            font (:class:`aggdraw.Font`): The font object to render with.
 
         Returns:
             tuple: A (width, height) tuple.
@@ -536,7 +536,7 @@ class Draw():
 
         Args:
             text (str): A string of text to measure.
-            font (:obj:`aggdraw.Font`): The font object to render with.
+            font (:class:`aggdraw.Font`): The font object to render with.
 
         Returns:
             tuple: A (width, height) tuple.
