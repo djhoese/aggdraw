@@ -1,7 +1,7 @@
 import aggdraw._aggdraw as _aggdraw
 
 
-class Brush():
+class Brush:
     """Creates a brush object.
 
     Brush objects define a fill color to use for drawing closed shapes with the
@@ -21,7 +21,7 @@ class Brush():
         self._brush = _aggdraw.Brush(color, opacity)
 
 
-class Pen():
+class Pen:
     """Creates a pen object.
 
     Pen objects define a line color and width to use for drawing lines, paths, and shape
@@ -53,7 +53,7 @@ class Pen():
         self._pen = _aggdraw.Pen(color, width, opacity)
 
 
-class Font():
+class Font:
     """Creates a font object.
 
     This creates a font object for use with :meth:`~aggdraw.Draw.text` and
@@ -76,7 +76,7 @@ class Font():
         self._font = _aggdraw.Font(color, file, size, opacity)
 
 
-class Symbol():
+class Symbol:
     """Symbol factory.
 
     This creates a symbol object from an SVG-style path descriptor for use with
@@ -105,7 +105,7 @@ class Symbol():
         self._path = _aggdraw.Symbol(path, scale)
 
 
-class Path():
+class Path:
     """Path factory.
 
     Path objects allow you to define custom paths and shapes that can be drawn with
@@ -237,7 +237,7 @@ class Path():
         self._path.rmoveto(x, y)
 
 
-class Draw():
+class Draw:
     """Creates a drawing interface object.
     
     The constructor can either take a PIL Image object, or mode and size specifiers.
