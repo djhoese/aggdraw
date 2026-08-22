@@ -132,7 +132,19 @@ class Path():
         This method adds a line segment connecting the end of the current segment to
         the start of the path. If the path position has been moved at any point by
         :meth:`moveto` or :meth:`rmoveto`, the current segment will instead be connected
+        This method adds a line segment connecting the end of the current segment to
+        the start of the path. If the path position has been moved at any point by
+        :meth:`moveto` or :meth:`rmoveto`, the current segment will instead be connected
         to the start of the first segment since the path position was last moved.
+        
+        A subpath needs at least three distinct points to be closed. Calling this
+        method on a subpath with fewer will remove it from the drawing entirely
+        including the segments already added to it by :meth:lineto. This is a bug in the underlying AGG C++ library.
+        
+        Closing a subpath of collinear points (no enclosed area) may produce unexpected
+        results as AGG tries to draw a closing segment over the existing drawn
+        segments. This can create incomplete line segments (i.e. "slivers) or other
+        artifacts.
 
         """
         self._path.close()
