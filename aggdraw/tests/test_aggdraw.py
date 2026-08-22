@@ -112,6 +112,7 @@ def test_brush():
     assert im.getpixel((1, 51)) == (127, 127, 127)
     assert im.getpixel((51, 51)) == (220, 20, 60)
 
+
 def test_graphics():
     from aggdraw import Draw, Pen, Brush
     draw = Draw("RGB", (500, 500))
