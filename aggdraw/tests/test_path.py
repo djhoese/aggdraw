@@ -164,7 +164,7 @@ def _render(path):
     """Draw a path in black on a white 100x100 surface.
 
     Drawing black on white means any pixel that isn't WHITE is part of the
-    path. Antialiasing makes the edges grey rather than pure black, so tests
+    path. Antialiasing makes the edges gray rather than pure black, so tests
     check for "not the background" instead of for an exact ink color.
     """
     draw = aggdraw.Draw("RGB", (100, 100), "white")

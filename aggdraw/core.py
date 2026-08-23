@@ -7,9 +7,22 @@ class Brush:
     Brush objects define a fill color to use for drawing closed shapes with the
     :class:`aggdraw.Draw` class.
 
-    The brush color can be an RGB tuple (e.g. ``(255, 255, 255)``), a string specifying
-    a basic HTML color or RGB hex code (e.g. ``"black"``, ``"blue"``, ``"#FFFF00"``), or
-    an integer from 0 to 255 specifying a shade of grey.
+    The brush color can be given as:
+
+    * an RGB tuple, e.g. ``(255, 255, 0)``. The alpha channel is taken from the
+      ``opacity`` argument.
+    * an RGBA tuple, e.g. ``(255, 255, 0, 128)``. The fourth element sets the
+      alpha channel directly and overrides ``opacity`` entirely.
+    * a color string, e.g. ``"black"``, ``"#FFFF00"``, ``"#ff0"``, or
+      ``"rgb(255, 255, 0)"``. Any string that :obj:`PIL.ImageColor.getrgb`
+      resolves to an RGB triplet is accepted, including the full set of CSS
+      color names. Strings that resolve to four components, such as
+      ``"rgba(255, 0, 0, 128)"``, are not.
+    * an integer from 0 to 255 specifying a shade of gray. Values outside that
+      range wrap around, so ``300`` gives the same gray as ``44``.
+
+    Note that an unrecognized color does not raise an error; it is silently
+    treated as black.
     
     Args:
         color: The brush color.
@@ -27,9 +40,22 @@ class Pen:
     Pen objects define a line color and width to use for drawing lines, paths, and shape
     outlines with the :class:`aggdraw.Draw` class.
 
-    The pen color can be an RGB tuple (e.g. ``(255, 255, 255)``), a string specifying
-    a basic HTML color or RGB hex code (e.g. ``"black"``, ``"blue"``, ``"#FFFF00"``), or
-    an integer from 0 to 255 specifying a shade of grey.
+    The pen color can be given as:
+
+    * an RGB tuple, e.g. ``(255, 255, 0)``. The alpha channel is taken from the
+      ``opacity`` argument.
+    * an RGBA tuple, e.g. ``(255, 255, 0, 128)``. The fourth element sets the
+      alpha channel directly and overrides ``opacity`` entirely.
+    * a color string, e.g. ``"black"``, ``"#FFFF00"``, ``"#ff0"``, or
+      ``"rgb(255, 255, 0)"``. Any string that :obj:`PIL.ImageColor.getrgb`
+      resolves to an RGB triplet is accepted, including the full set of CSS
+      color names. Strings that resolve to four components, such as
+      ``"rgba(255, 0, 0, 128)"``, are not.
+    * an integer from 0 to 255 specifying a shade of gray. Values outside that
+      range wrap around, so ``300`` gives the same gray as ``44``.
+
+    Note that an unrecognized color does not raise an error; it is silently
+    treated as black.
 
     Note that the width of a Pen extends equally on either side of the drawn path. This
     means that if drawing using a Pen with an odd width (e.g. 1, 3, 5) you may want to
@@ -37,7 +63,7 @@ class Pen:
 
        surface = Draw("RGB", (100, 100), "white")
        outline = Pen("black", width=1)
-       # Results in a 2-pixel-wide grey outline
+       # Results in a 2-pixel-wide gray outline
        surface.rectangle((2, 2, 10, 10), pen=outline)
        # Results in a 1-pixel-wide black outline
        surface.rectangle((2.5, 2.5, 10.5, 10.5), pen=outline)
@@ -59,9 +85,22 @@ class Font:
     This creates a font object for use with :meth:`~aggdraw.Draw.text` and
     :meth:`aggdraw.Draw.textsize` from a TrueType font file.
 
-    The font color can be an RGB tuple (e.g. ``(255, 255, 255)``), a string specifying
-    a basic HTML color or RGB hex code (e.g. ``"black"``, ``"blue"``, ``"#FFFF00"``), or
-    an integer from 0 to 255 specifying a shade of grey.
+    The font color can be given as:
+
+    * an RGB tuple, e.g. ``(255, 255, 0)``. The alpha channel is taken from the
+      ``opacity`` argument.
+    * an RGBA tuple, e.g. ``(255, 255, 0, 128)``. The fourth element sets the
+      alpha channel directly and overrides ``opacity`` entirely.
+    * a color string, e.g. ``"black"``, ``"#FFFF00"``, ``"#ff0"``, or
+      ``"rgb(255, 255, 0)"``. Any string that :obj:`PIL.ImageColor.getrgb`
+      resolves to an RGB triplet is accepted, including the full set of CSS
+      color names. Strings that resolve to four components, such as
+      ``"rgba(255, 0, 0, 128)"``, are not.
+    * an integer from 0 to 255 specifying a shade of gray. Values outside that
+      range wrap around, so ``300`` gives the same gray as ``44``.
+
+    Note that an unrecognized color does not raise an error; it is silently
+    treated as black.
     
     Args:
         color: The font color.
@@ -131,19 +170,18 @@ class Path:
 
         This method adds a line segment connecting the end of the current segment to
         the start of the path. If the path position has been moved at any point by
-        :meth:`moveto` or :meth:`rmoveto`, the current segment will instead be connected
-        This method adds a line segment connecting the end of the current segment to
-        the start of the path. If the path position has been moved at any point by
-        :meth:`moveto` or :meth:`rmoveto`, the current segment will instead be connected
-        to the start of the first segment since the path position was last moved.
-        
+        :meth:`~aggdraw.Path.moveto` or :meth:`~aggdraw.Path.rmoveto`, the current
+        segment will instead be connected to the start of the first segment since the
+        path position was last moved.
+
         A subpath needs at least three distinct points to be closed. Calling this
-        method on a subpath with fewer will remove it from the drawing entirely
-        including the segments already added to it by :meth:lineto. This is a bug in the underlying AGG C++ library.
-        
+        method on a subpath with fewer will remove it from the drawing entirely,
+        including the segments already added to it by :meth:`~aggdraw.Path.lineto`.
+        This is a bug in the underlying AGG C++ library.
+
         Closing a subpath of collinear points (no enclosed area) may produce unexpected
         results as AGG tries to draw a closing segment over the existing drawn
-        segments. This can create incomplete line segments (i.e. "slivers) or other
+        segments. This can create incomplete line segments (i.e. "slivers") or other
         artifacts.
 
         """
@@ -363,7 +401,8 @@ class Draw:
         will be drawn.
 
         Args:
-            xy: A Python sequence in the format (x, y, x, y, ...)
+            xy: A Python sequence in the format (x, y, x, y, ...) or an
+                :class:`aggdraw.Path`.
             pen (:class:`aggdraw.Pen`, optional): A pen to use for drawing the line.
 
         """

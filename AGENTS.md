@@ -108,12 +108,14 @@ cleanly with modern compilers, so the project carries patches:
 These are verified facts about the current code. Do not "fix" them without a deliberate
 decision, and do not document them wrongly.
 
-- **Colors.** An integer color is a **grey level** (`rgba8(ink, ink, ink, opacity)`), *not*
+- **Colors.** An integer color is a **gray level** (`rgba8(ink, ink, ink, opacity)`), *not*
   `0xAARRGGBB`. Out-of-range integers wrap silently (`300` → 44). A 3-tuple takes its alpha
-  from the `opacity` argument; a **4-tuple overrides `opacity` entirely**. Strings go through a
-  17-name built-in table, then `PIL.ImageColor.getrgb`, so `"#rrggbb"`, `"#rgb"`,
-  `"rgb(...)"`, `"hsl(...)"` and full CSS names all work. **An unrecognised color silently
-  becomes black** — no exception is raised.
+  from the `opacity` argument; a **4-tuple overrides `opacity` entirely**. `"#rrggbb"` is parsed
+  in C; every other string goes to `PIL.ImageColor.getrgb` **first**, with a 17-name built-in
+  table only as a fallback — so `"#rgb"`, `"rgb(...)"`, `"hsl(...)"` and full CSS names all
+  work. Strings PIL resolves to *four* components (`"rgba(...)"`) do **not**: the C side parses
+  the result with `"iii"`. **An unrecognised color silently becomes black** — no exception is
+  raised.
 - **Pen/brush argument order is cosmetic.** All shape methods funnel into a C dispatcher that
   picks the pen and brush **by type**, not by position. `Draw.arc(xy, start, end, brush)` will
   fill. Any argument that is neither a `Pen` nor a `Brush` (including `None`) is silently
@@ -150,7 +152,7 @@ decision, and do not document them wrongly.
   re-implement them. Note `to_image` gets the channel order wrong for BGRA surfaces, because
   `Draw('BGRA', ...)` reports `.mode == 'RGBA'` (see "Behaviours that surprise people").
 - Assert `!= WHITE` rather than an exact ink color when a shape is drawn with a `Pen` on integer
-  coordinates — the pen straddles the path, so edges come out antialiased grey. Exact-color
+  coordinates — the pen straddles the path, so edges come out antialiased gray. Exact-color
   assertions are for half-pixel coordinates (`x.5`) or brush fills.
 - Prefer asserting pixels over merely calling the API. Several existing tests are pure smoke
   tests with no assertions; don't add more.
