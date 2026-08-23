@@ -167,7 +167,7 @@ setup(
                   )
         ],
     extras_require={
-        "tests": ["pytest"],
+        "tests": ["pytest", "numpy", "pillow"],
         "docs": [
             "sphinx",
             "sphinx_rtd_theme",

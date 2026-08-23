@@ -1,3 +1,5 @@
+"""Tests for the Path class."""
+
 import aggdraw
 import pytest
 

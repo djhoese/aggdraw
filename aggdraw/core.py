@@ -70,7 +70,7 @@ class Pen:
     
     Args:
         color: The pen color.
-        width (int, optional): The width of the pen.
+        width (float, optional): The width of the pen.
         opacity (int, optional): The opacity of the pen (from 0 to 255). Defaults to
             a solid pen.
 
@@ -83,7 +83,7 @@ class Font:
     """Creates a font object.
 
     This creates a font object for use with :meth:`~aggdraw.Draw.text` and
-    :meth:`aggdraw.Draw.textsize` from a TrueType font file.
+    :meth:`~aggdraw.Draw.textsize` from a TrueType font file.
 
     The font color can be given as:
 
@@ -119,7 +119,7 @@ class Symbol:
     """Symbol factory.
 
     This creates a symbol object from an SVG-style path descriptor for use with
-    :meth:`aggdraw.Draw.symbol`.
+    :meth:`~aggdraw.Draw.symbol`.
 
     The following operators are supported:
      * M (move)
@@ -148,7 +148,7 @@ class Path:
     """Path factory.
 
     Path objects allow you to define custom paths and shapes that can be drawn with
-    :meth:`aggdraw.Draw.path` or :meth:`aggdraw.Draw.symbol`.
+    :meth:`~aggdraw.Draw.path` or :meth:`~aggdraw.Draw.symbol`.
 
     Paths are created sequentially, with each new line and curve segment connected to
     the end of the previous segment (unless the current path position is changed
@@ -200,7 +200,7 @@ class Path:
 
     def curveto(self, x1, y1, x2, y2, x, y):
         """Adds a cubic bezier curve segment to the path.
-        
+
         The added curve will be between the path's current position and the specified
         endpoint.
 
@@ -231,11 +231,11 @@ class Path:
 
     def moveto(self, x, y):
         """Moves the path position to the given location.
-        
+
         Moving the path position will change the start point of the next segment added
         to the path without adding a new segment, creating a gap between the previous
         segment and the next.
-        
+
         Args:
             x (float): The x coordinate of the new path position.
             y (float): The y coordinate of the new path position.
@@ -281,12 +281,13 @@ class Draw:
     The constructor can either take a PIL Image object, or mode and size specifiers.
 
     Examples::
+
        d = aggdraw.Draw(im)
        d = aggdraw.Draw("RGB", (800, 600), "white")
 
     Args:
         image_or_mode: A PIL image or a mode string. The following modes are
-            supported: “L”, “RGB”, “RGBA”, “BGR”, “BGRA”.
+            supported: ``"L"``, ``"RGB"``, ``"RGBA"``, ``"BGR"``, ``"BGRA"``.
         size (tuple, optional): The size of the image (width, height).
         color (optional): An optional background color. If omitted, defaults
             to white with full alpha.
@@ -419,9 +420,9 @@ class Draw:
         it is used to draw an outline around the path. Either one (or both)
         can be left out.
 
-        This method draws the path without translation (using the coordinates specified
-        when defining the :class:`aggdraw.Path`). To draw a path at a specific location on
-        the surface, see :meth:`~aggdraw.Draw.symbol`.
+        This method draws the path without translation (using the coordinates
+        specified when defining the :class:`aggdraw.Path`). To draw a path at a
+        specific location on the surface, see :meth:`~aggdraw.Draw.symbol`.
 
         Args:
             path (:class:`aggdraw.Path`): The Path object to draw.
@@ -539,6 +540,7 @@ class Draw:
         it is reset.
 
         Example::
+
            draw.settransform((dx, dy))
         
         Args:
@@ -562,7 +564,8 @@ class Draw:
 
         Args:
             xy: A Python sequence in the format (x, y, x, y, ...)
-            symbol (:class:`aggdraw.Symbol`, :class:`aggdraw.Path`): The Symbol (or Path) object to draw.
+            symbol (:class:`aggdraw.Symbol`, :class:`aggdraw.Path`): The Symbol (or
+                Path) object to draw.
             pen (:class:`aggdraw.Pen`, optional): A pen to use for drawing an outline
                 around the symbol.
             brush (:class:`aggdraw.Brush`, optional): A brush to use for filling
@@ -576,6 +579,7 @@ class Draw:
         """Draws a text string at a given position using a given font.
 
         Example::
+
            font = aggdraw.Font(black, times)
            draw.text((100, 100), "hello, world", font)
 
