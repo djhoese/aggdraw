@@ -133,7 +133,7 @@ instance/
 .scrapy
 
 # Sphinx documentation
-docs/_build/
+doc/_build/
 
 # PyBuilder
 target/
@@ -152,6 +152,9 @@ celerybeat-schedule
 
 # dotenv
 .env
+
+# macOS metadata
+.DS_Store
 
 # virtualenv
 .venv

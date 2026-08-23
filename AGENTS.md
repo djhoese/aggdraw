@@ -35,7 +35,12 @@ single bare `.. automodule:: aggdraw`. Consequences:
 - A new public method must live in `core.py` **with a Google/napoleon-style docstring**, or it
   will not appear in the docs at all.
 - Read the Docs sets `fail_on_warning: true` (`.readthedocs.yml`), so a broken cross-reference
-  or malformed docstring fails the docs build.
+  or malformed docstring fails the docs build. **This is not a safety net for a role written
+  without backticks**: `:meth:foo` is never parsed as a role, so it renders as literal text and
+  emits no warning. `sphinx-build -W` passing does not mean the docstrings render correctly —
+  read the generated HTML for anything you change.
+- `doc/source/conf.py` sets `autodoc_member_order = 'bysource'`, so methods appear in the docs
+  in the order they are defined in `core.py`. Adding a method puts it wherever you place it.
 - The C-level docstrings in `_aggdraw.cxx` use numpydoc style and are **not** rendered anywhere.
   They are reachable only via `help()` on `aggdraw._aggdraw` objects. Several of them are known
   to be stale or wrong. If you change behaviour, update both.
@@ -103,12 +108,14 @@ cleanly with modern compilers, so the project carries patches:
 These are verified facts about the current code. Do not "fix" them without a deliberate
 decision, and do not document them wrongly.
 
-- **Colors.** An integer color is a **grey level** (`rgba8(ink, ink, ink, opacity)`), *not*
+- **Colors.** An integer color is a **gray level** (`rgba8(ink, ink, ink, opacity)`), *not*
   `0xAARRGGBB`. Out-of-range integers wrap silently (`300` → 44). A 3-tuple takes its alpha
-  from the `opacity` argument; a **4-tuple overrides `opacity` entirely**. Strings go through a
-  17-name built-in table, then `PIL.ImageColor.getrgb`, so `"#rrggbb"`, `"#rgb"`,
-  `"rgb(...)"`, `"hsl(...)"` and full CSS names all work. **An unrecognised color silently
-  becomes black** — no exception is raised.
+  from the `opacity` argument; a **4-tuple overrides `opacity` entirely**. `"#rrggbb"` is parsed
+  in C; every other string goes to `PIL.ImageColor.getrgb` **first**, with a 17-name built-in
+  table only as a fallback — so `"#rgb"`, `"rgb(...)"`, `"hsl(...)"` and full CSS names all
+  work. Strings PIL resolves to *four* components (`"rgba(...)"`) do **not**: the C side parses
+  the result with `"iii"`. **An unrecognised color silently becomes black** — no exception is
+  raised.
 - **Pen/brush argument order is cosmetic.** All shape methods funnel into a C dispatcher that
   picks the pen and brush **by type**, not by position. `Draw.arc(xy, start, end, brush)` will
   fill. Any argument that is neither a `Pen` nor a `Brush` (including `None`) is silently
@@ -132,11 +139,21 @@ decision, and do not document them wrongly.
 
 ## Testing conventions
 
-- Plain pytest. No fixtures, no `conftest.py`, no `parametrize`, no golden/reference images.
+- Plain pytest. No fixtures and no `conftest.py`; `@pytest.mark.parametrize` is used, but only
+  for the `Draw`-method matrix in `test_path.py`. No golden or reference images anywhere.
 - Tests live in `aggdraw/tests/` and ship inside the installed package (cibuildwheel runs
   `pytest --pyargs aggdraw.tests` against the built wheel).
-- Pixel verification pattern: `Image.frombytes(draw.mode, draw.size, draw.tobytes())`, then
-  `im.getpixel((x, y)) == (r, g, b)`. See `_to_image` in `aggdraw/tests/test_aggdraw.py`.
+- One module per drawing type — put a new test in the one that matches what it draws:
+  `test_pen.py`, `test_brush.py`, `test_draw.py`, `test_path.py`, `test_symbol.py`.
+  `test_aggdraw.py` is only for package-level checks (`VERSION`, `__version__`).
+- Shared helpers live in `aggdraw/tests/_helpers.py`, not in any test module: `to_image(draw)`
+  wraps `Image.frombytes(draw.mode, draw.size, draw.tobytes())`, `ink_count(im)` counts
+  non-background pixels, and `WHITE` is the background constant. Import them; do not
+  re-implement them. Note `to_image` gets the channel order wrong for BGRA surfaces, because
+  `Draw('BGRA', ...)` reports `.mode == 'RGBA'` (see "Behaviours that surprise people").
+- Assert `!= WHITE` rather than an exact ink color when a shape is drawn with a `Pen` on integer
+  coordinates — the pen straddles the path, so edges come out antialiased gray. Exact-color
+  assertions are for half-pixel coordinates (`x.5`) or brush fills.
 - Prefer asserting pixels over merely calling the API. Several existing tests are pure smoke
   tests with no assertions; don't add more.
 

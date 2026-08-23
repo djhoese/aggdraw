@@ -53,7 +53,6 @@ API
 .. automodule:: aggdraw
     :members:
     :undoc-members:
-    :show-inheritance:
 
 
 Indices and tables
