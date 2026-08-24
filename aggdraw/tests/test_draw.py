@@ -106,3 +106,14 @@ def test_polygon_closes_coords_but_not_path():
     filled_coords = polygon(corner, brush=brush)
     filled_path = polygon(open_path, brush=brush)
     assert filled_coords.tobytes() == filled_path.tobytes()
+
+
+def test_draw_type_is_readable():
+    """type() on the underlying C Draw object must not crash.
+
+    The C type objects are only given an ob_type by PyType_Ready, which the
+    module init used to skip entirely.
+    """
+    from aggdraw import Draw
+
+    assert type(Draw("RGB", (10, 10), "white")._draw).__name__ == "Draw"

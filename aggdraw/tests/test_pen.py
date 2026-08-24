@@ -51,3 +51,27 @@ def test_graphics3():
     main = Image.new("RGB", (480, 1024), "white")
     d = Draw(main)
     p = Pen((90,) * 3, 0.5)
+
+
+def test_pen_type_is_readable():
+    """The C type objects must be readied at import; see issue in _aggdraw.cxx.
+
+    Before the Python 2 removal the type objects were never passed to
+    PyType_Ready, leaving ob_type NULL, so type() on one segfaulted.
+    """
+    from aggdraw import Pen
+
+    assert type(Pen("black")._pen).__name__ == "Pen"
+
+
+def test_pen_non_ascii_color():
+    """A non-ASCII color name must not crash; it falls back to black.
+
+    getcolor() used to reach strcmp() with a NULL pointer whenever
+    PyUnicode_AsASCIIString failed on the color string.
+    """
+    from aggdraw import Draw, Brush
+
+    surf = Draw("RGB", (10, 10), "white")
+    surf.rectangle((0, 0, 9, 9), Brush("café"))
+    assert to_image(surf).getpixel((5, 5)) == (0, 0, 0)
