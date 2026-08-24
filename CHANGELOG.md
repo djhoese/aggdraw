@@ -4,6 +4,23 @@
 
 - Fix incorrect and missing docstrings in the C extension (`help()` output)
 - Declare Pillow as a runtime dependency (`install_requires`)
+- Remove all Python 2 support code from the C extension. The minimum supported
+  Python has been 3.11 since 1.4.0, so every `#ifdef IS_PY3K` fallback was dead
+  code.
+- Fix a segfault in `type()` on any `aggdraw._aggdraw` object. The type objects
+  were never passed to `PyType_Ready`, so they kept a NULL `ob_type`.
+- Fix a segfault when a color is a non-ASCII string, e.g. `Pen("café")`. Such a
+  color is now treated as unrecognized (black), like any other one aggdraw and
+  Pillow cannot resolve.
+- **Breaking:** `Font.family` and `Font.style` now return `str` instead of
+  `bytes`. These are only reachable on the underlying `aggdraw._aggdraw.Font`
+  object, not through the documented `aggdraw.Font` wrapper.
+- **Breaking:** `bytes` are no longer accepted where a `str` is expected -- as a
+  color, as text to draw, or as a PIL image's `mode`. `Pen(b"#ff0000")` used to
+  render red and now renders black, since an unrecognized color silently becomes
+  black; `Pen(b"black")` is unchanged only by coincidence.
+- Setting an attribute on a `Pen` or `Brush` now raises `AttributeError` rather
+  than `TypeError`, a side effect of the types being readied properly.
 
 ## Version 1.4.1
 
