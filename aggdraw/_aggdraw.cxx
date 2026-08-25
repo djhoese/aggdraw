@@ -436,6 +436,14 @@ const char *draw_doc = "Creates a drawing interface object.\n"
 static PyObject*
 draw_new(PyTypeObject* type, PyObject* args, PyObject* kw)
 {
+    /* tp_new is handed keywords whether or not it wants them; the old
+       METH_VARARGS entry point rejected them, so keep doing that rather than
+       accepting and ignoring them. */
+    if (kw != NULL && PyDict_GET_SIZE(kw) != 0) {
+        PyErr_SetString(PyExc_TypeError, "Draw() takes no keyword arguments");
+        return NULL;
+    }
+
     char buffer[10];
     int ok;
 
@@ -1872,6 +1880,11 @@ const char *path_doc = "Path factory (experimental).\n"
 static PyObject*
 path_new(PyTypeObject* type, PyObject* args, PyObject* kw)
 {
+    if (kw != NULL && PyDict_GET_SIZE(kw) != 0) {
+        PyErr_SetString(PyExc_TypeError, "Path() takes no keyword arguments");
+        return NULL;
+    }
+
     PyObject* xyIn = NULL;
     if (!PyArg_ParseTuple(args, "|O:Path", &xyIn))
         return NULL;

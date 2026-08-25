@@ -117,3 +117,23 @@ def test_draw_type_is_readable():
     from aggdraw import Draw
 
     assert type(Draw("RGB", (10, 10), "white")._draw).__name__ == "Draw"
+
+
+def test_draw_rejects_keyword_arguments():
+    """Draw() and Path() take no keyword arguments.
+
+    They are tp_new slots now, and tp_new is handed keywords whether or not it
+    wants them; without an explicit check they would be silently ignored.
+    """
+    import pytest
+
+    from aggdraw import _aggdraw
+
+    with pytest.raises(TypeError, match="no keyword arguments"):
+        _aggdraw.Draw("RGB", (4, 4), color="red")
+    with pytest.raises(TypeError, match="no keyword arguments"):
+        _aggdraw.Path([0, 0, 1, 1], bogus=1)
+
+    # the keyword-accepting constructors are unaffected
+    assert _aggdraw.Pen(color="red", width=2).width == 2.0
+    assert _aggdraw.Brush(color="red", opacity=128).color == (255, 0, 0, 128)
