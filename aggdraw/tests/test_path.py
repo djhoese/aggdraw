@@ -1,5 +1,7 @@
 """Tests for the Path class."""
 
+import sys
+
 import aggdraw
 import pytest
 
@@ -197,3 +199,25 @@ def _sample_path():
     p.rlineto(-80, 0)
     p.close()
     return p
+
+
+def test_coords_does_not_leak():
+    """coords() must release the floats it appends to the result list.
+
+    PyList_Append takes its own reference, so the one returned by
+    PyFloat_FromDouble used to leak -- one object per coordinate, per call.
+    """
+    if not sys.getallocatedblocks():
+        pytest.skip("needs pymalloc to count allocated blocks")
+
+    path = aggdraw.Path([0, 0, 10, 10, 20, 5, 30, 30])
+    for _ in range(100):  # let any one-time caches settle
+        path.coords()
+
+    before = sys.getallocatedblocks()
+    for _ in range(2000):
+        path.coords()
+    growth = sys.getallocatedblocks() - before
+
+    # 8 coordinates per call: a leak shows up as ~16000 blocks, not a handful.
+    assert growth < 100, f"coords() leaked {growth} blocks over 2000 calls"

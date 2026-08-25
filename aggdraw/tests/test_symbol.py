@@ -28,3 +28,38 @@ def test_graphics2():
     canvas.symbol((0, 0), symbol, pen)
     canvas.flush()
     assert np.asarray(image).sum() == 50800
+
+
+def test_invalid_symbol_does_not_leak():
+    """A rejected path descriptor must release the half-built object.
+
+    The parser's error paths used to be marked "FIXME: cleanup" and returned
+    without freeing the object or its agg::path_storage.
+    """
+    import sys
+
+    import pytest
+
+    from aggdraw import Symbol
+
+    if not sys.getallocatedblocks():
+        pytest.skip("needs pymalloc to count allocated blocks")
+
+    def build():
+        # plain try/except, not pytest.raises: ExceptionInfo objects accumulate
+        # and would swamp the measurement.
+        try:
+            Symbol("Q not a valid path")
+        except ValueError:
+            return
+        raise AssertionError("expected ValueError")
+
+    for _ in range(200):  # let any one-time caches settle
+        build()
+
+    before = sys.getallocatedblocks()
+    for _ in range(2000):
+        build()
+    growth = sys.getallocatedblocks() - before
+
+    assert growth < 100, f"failed Symbol() leaked {growth} blocks over 2000 calls"

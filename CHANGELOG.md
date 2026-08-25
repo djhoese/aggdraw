@@ -21,6 +21,20 @@
   black; `Pen(b"black")` is unchanged only by coincidence.
 - Setting an attribute on a `Pen` or `Brush` now raises `AttributeError` rather
   than `TypeError`, a side effect of the types being readied properly.
+- Fix a memory leak in `Path.coords()`, which leaked one float object per
+  coordinate on every call. `PyList_Append` takes its own reference, so the one
+  returned by `PyFloat_FromDouble` was never released.
+- Fix a memory leak of the `agg::trans_affine` set by `Draw.settransform()`.
+  The transform was freed when replaced but never when the `Draw` itself was
+  deallocated.
+- Fix memory leaks on several constructor error paths, previously marked
+  `FIXME`. A rejected `Symbol()` path descriptor, a `Font()` whose file cannot
+  be loaded, and a `Draw()` whose image data is the wrong size all leaked the
+  half-built object.
+- Fix a window in `Draw(image)` where the object held a borrowed reference to
+  the PIL image; the reference is now taken at the point of assignment.
+- The dictionary backing the internal color-resolution helper is no longer
+  leaked at import.
 
 ## Version 1.4.1
 

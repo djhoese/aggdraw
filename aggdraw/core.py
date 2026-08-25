@@ -317,9 +317,9 @@ class Draw:
         return self._draw.mode
 
     def _parse_args(self, brush=None, pen=None):
-        # Allow order of brush and pen to be reversed, matching C++ API
-        # NOTE: This segfaults for some reason if pen and brush are swapped here
-        # instead of leaving it to the C++ extension to handle
+        # Allow order of brush and pen to be reversed, matching C++ API.
+        # The C dispatcher picks pen and brush by type, not by position, so
+        # this only has to unwrap whichever object it was actually handed.
         if brush:
             brush = brush._pen if isinstance(brush, Pen) else brush._brush
         if pen:

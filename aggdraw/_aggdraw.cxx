@@ -561,6 +561,16 @@ draw_new(PyObject* self_, PyObject* args)
     if (self == NULL)
         return NULL;
 
+    /* PyObject_NEW does not zero the allocation and draw_dealloc deletes every
+       pointer field, so they must all be valid before any error path below can
+       Py_DECREF(self). */
+    self->draw = NULL;
+    self->buffer = NULL;
+    self->transform = NULL;
+    self->buffer_data = NULL;
+    self->image = NULL;
+    self->background = NULL;
+
     int stride;
     if (!strcmp(mode, "L")) {
         self->mode = agg::pix_format_gray8;
@@ -579,7 +589,7 @@ draw_new(PyObject* self_, PyObject* args)
         stride = xsize * 4;
     } else {
         PyErr_SetString(PyExc_ValueError, "bad mode");
-        PyObject_DEL(self);
+        Py_DECREF(self);
         return NULL;
     }
 
@@ -598,19 +608,23 @@ draw_new(PyObject* self_, PyObject* args)
     self->xsize = xsize;
     self->ysize = ysize;
 
-    self->transform = NULL;
-
+    /* Take the reference at the point of assignment, not after the round-trip
+       below: until this incref runs the struct holds a borrowed pointer. */
+    Py_XINCREF(image);
     self->image = image;
     if (image) {
         PyObject* buffer = PyObject_CallMethod(image, "tobytes", NULL);
-        if (!buffer)
-            return NULL; /* FIXME: release resources */
+        if (!buffer) {
+            Py_DECREF(self);
+            return NULL;
+        }
         if (!PyBytes_Check(buffer)) {
             PyErr_SetString(
                 PyExc_TypeError,
                 "bad 'tobytes' return value (expected string)"
                 );
             Py_DECREF(buffer);
+            Py_DECREF(self);
             return NULL;
         }
         char* data = PyBytes_AS_STRING(buffer);
@@ -620,9 +634,9 @@ draw_new(PyObject* self_, PyObject* args)
         else {
             PyErr_SetString(PyExc_ValueError, "not enough data");
             Py_DECREF(buffer);
-            return NULL; /* FIXME: release resources */
+            Py_DECREF(self);
+            return NULL;
         }
-        Py_INCREF(image); /* hang on to this image */
         Py_DECREF(buffer);
     }
 
@@ -1486,6 +1500,7 @@ draw_dealloc(DrawObject* self)
 {
     delete self->draw;
     delete self->buffer;
+    delete self->transform;
     delete [] self->buffer_data;
 
     Py_XDECREF(self->background);
@@ -1685,6 +1700,7 @@ font_new(PyObject* self_, PyObject* args, PyObject* kw)
 
     if (!font_load(self)) {
         PyErr_SetString(PyExc_IOError, "cannot load font");
+        Py_DECREF(self);
         return NULL;
     }
 
@@ -1867,6 +1883,7 @@ symbol_new(PyObject* self_, PyObject* args)
                 PyErr_Format(
                     PyExc_ValueError, "no command at start of path"
                     );
+                Py_DECREF(self);
                 return NULL;
             }
             COMMA_WSP;
@@ -1988,7 +2005,7 @@ symbol_new(PyObject* self_, PyObject* args)
                 PyExc_ValueError,
                 "unknown path command '%c'", op
                 );
-            /* FIXME: cleanup */
+            Py_DECREF(self);
             return NULL;
         }
         if (p == q) {
@@ -1996,7 +2013,7 @@ symbol_new(PyObject* self_, PyObject* args)
                 PyExc_ValueError,
                 "invalid arguments for command '%c'", op
                 );
-            /* FIXME: cleanup */
+            Py_DECREF(self);
             return NULL;
         }
     }
@@ -2224,6 +2241,20 @@ const char *path_coords_doc = "Returns the coordinates for this path.\n"
                               "\n"
                               "Curves are flattened before being returned.\n";
 
+/* Append a float to a list, releasing the temporary. PyList_Append takes its
+   own reference, so the one returned by PyFloat_FromDouble must be dropped or
+   every coordinate leaks an object. */
+static int
+append_float(PyObject* list, double value)
+{
+    PyObject* item = PyFloat_FromDouble(value);
+    if (!item)
+        return -1;
+    int status = PyList_Append(list, item);
+    Py_DECREF(item);
+    return status;
+}
+
 static PyObject*
 path_coords(PathObject* self, PyObject* args)
 {
@@ -2245,10 +2276,10 @@ path_coords(PathObject* self, PyObject* args)
     unsigned cmd;
     while (!agg::is_stop(cmd = curve.vertex(&x, &y))) {
         if (agg::is_vertex(cmd)) {
-            if (PyList_Append(list, PyFloat_FromDouble(x)) < 0)
+            if (append_float(list, x) < 0 || append_float(list, y) < 0) {
+                Py_DECREF(list);
                 return NULL;
-            if (PyList_Append(list, PyFloat_FromDouble(y)) < 0)
-                return NULL;
+            }
         }
     }
 
@@ -2381,8 +2412,16 @@ aggdraw_init(void)
     }
 
     PyObject* g = PyDict_New();
-    PyDict_SetItemString(g, "__builtins__", PyEval_GetBuiltins());
-    PyRun_String(
+    if (g == NULL) {
+        Py_DECREF(module);
+        return NULL;
+    }
+    if (PyDict_SetItemString(g, "__builtins__", PyEval_GetBuiltins()) < 0) {
+        Py_DECREF(g);
+        Py_DECREF(module);
+        return NULL;
+    }
+    PyObject* result = PyRun_String(
         "try:\n"
         "    from PIL import ImageColor\n"
         "except ImportError:\n"
@@ -2394,12 +2433,18 @@ aggdraw_init(void)
         "", Py_file_input, g, NULL
 
         );
+    if (result == NULL) {
+        Py_DECREF(g);
+        Py_DECREF(module);
+        return NULL;
+    }
+    Py_DECREF(result);
 
-    /* Borrowed reference. `g` is deliberately leaked: it is what keeps
-       aggdraw_getcolor_obj alive for the lifetime of the module. Do not
-       "tidy up" with Py_DECREF(g) -- that turns every getcolor() call into
-       a use-after-free. */
+    /* PyDict_GetItemString returns a borrowed reference, so take a strong one
+       of our own before releasing the dict that owns it. */
     aggdraw_getcolor_obj = PyDict_GetItemString(g, "getcolor");
+    Py_XINCREF(aggdraw_getcolor_obj);
+    Py_DECREF(g);
 
 #ifdef Py_GIL_DISABLED
     PyUnstable_Module_SetGIL(module, Py_MOD_GIL_NOT_USED);
