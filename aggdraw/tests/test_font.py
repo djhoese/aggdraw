@@ -47,14 +47,15 @@ def test_font_metrics_are_str():
     They used to be built with PyBytes_FromString, a leftover from Python 2
     where that produced a str.
     """
-    # these attributes are only exposed on the underlying C object
-    cfont = _font_or_skip("black")._font
+    font = _font_or_skip("black")
 
-    assert isinstance(cfont.family, str)
-    assert isinstance(cfont.style, str)
-    assert cfont.family
-    assert isinstance(cfont.ascent, float)
-    assert isinstance(cfont.descent, float)
+    assert isinstance(font.family, str)
+    assert isinstance(font.style, str)
+    assert font.family
+    assert isinstance(font.ascent, float)
+    assert isinstance(font.descent, float)
+    # the wrapper forwards to the same values on the C object
+    assert font.family == font._font.family
 
 
 def test_font_draws_text():

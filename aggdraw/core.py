@@ -34,6 +34,16 @@ class Brush:
     def __init__(self, color, opacity=255):
         self._brush = _aggdraw.Brush(color, opacity)
 
+    @property
+    def color(self):
+        """tuple: The resolved brush color as ``(R, G, B, A)``.
+
+        This is the color after parsing, so a color that could not be
+        recognized reads back as black.
+
+        """
+        return self._brush.color
+
 
 class Pen:
     """Creates a pen object.
@@ -80,6 +90,21 @@ class Pen:
     def __init__(self, color, width=1, opacity=255):
         self._pen = _aggdraw.Pen(color, width, opacity)
 
+    @property
+    def color(self):
+        """tuple: The resolved pen color as ``(R, G, B, A)``.
+
+        This is the color after parsing, so a color that could not be
+        recognized reads back as black.
+
+        """
+        return self._pen.color
+
+    @property
+    def width(self):
+        """float: The width of the pen."""
+        return self._pen.width
+
 
 class Font:
     """Creates a font object.
@@ -116,6 +141,26 @@ class Font:
     def __init__(self, color, file, size=12, opacity=255):
         # NOTE: Only available if compiled with FreeType support
         self._font = _aggdraw.Font(color, file, size, opacity)
+
+    @property
+    def family(self):
+        """str: The font family name reported by FreeType."""
+        return self._font.family
+
+    @property
+    def style(self):
+        """str: The font style name reported by FreeType."""
+        return self._font.style
+
+    @property
+    def ascent(self):
+        """float: The font ascent, in pixels."""
+        return self._font.ascent
+
+    @property
+    def descent(self):
+        """float: The font descent, in pixels, as a positive number."""
+        return self._font.descent
 
 
 class Symbol:

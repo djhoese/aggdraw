@@ -35,6 +35,17 @@
   the PIL image; the reference is now taken at the point of assignment.
 - The dictionary backing the internal color-resolution helper is no longer
   leaked at import.
+- `Pen`, `Brush`, `Font`, `Path` and `Draw` in the C extension are now real
+  classes rather than factory functions returning opaque objects. They are
+  heap types built with `PyType_FromSpec`, exposed on `aggdraw._aggdraw` as
+  types, and can be subclassed. `Symbol` remains a factory function because it
+  returns a `Path`.
+- New: `Pen.color`, `Pen.width` and `Brush.color` report the resolved color and
+  width. The color is given as `(R, G, B, A)` after parsing, so an unrecognized
+  color reads back as black.
+- New: `Font.family`, `Font.style`, `Font.ascent` and `Font.descent` are now
+  available on the documented `aggdraw.Font` wrapper, not only on the
+  underlying C object.
 
 ## Version 1.4.1
 

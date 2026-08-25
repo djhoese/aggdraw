@@ -117,26 +117,18 @@ typedef struct {
 /* glue functions (see the init function for details) */
 static PyObject* aggdraw_getcolor_obj;
 
-static void draw_dealloc(DrawObject* self);
-static PyObject* draw_getattro(DrawObject* self, PyObject* nameobj);
-static PyTypeObject DrawType = {
-    PyVarObject_HEAD_INIT(NULL, 0)
-    "Draw", sizeof(DrawObject), 0,
-    /* methods */
-    (destructor) draw_dealloc, /* tp_dealloc */
-    0, /* tp_vectorcall_offset */
-    0, /* tp_getattr */
-    0, /* tp_setattr */
-    0, /* tp_as_async */
-    0, /* tp_repr */
-    0, /* tp_as_number */
-    0, /* tp_as_sequence */
-    0, /* tp_as_mapping */
-    0, /* tp_hash */
-    0, /* tp_call */
-    0, /* tp_str */
-    (getattrofunc)draw_getattro, /* tp_getattro */
-};
+/* All five types are heap types, created with PyType_FromSpec in aggdraw_init
+   and exposed on the module as real classes. Each PyType_Spec is defined next
+   to that type's own methods, further down the file. */
+static PyTypeObject* DrawType;
+static PyTypeObject* PenType;
+static PyTypeObject* BrushType;
+static PyTypeObject* FontType;
+static PyTypeObject* PathType;
+
+/* The _Check macros use PyObject_TypeCheck rather than an identity test: the
+   types set Py_TPFLAGS_BASETYPE, and an identity test would make
+   draw_adaptor::draw silently ignore a subclass of Pen or Brush. */
 
 typedef struct {
     PyObject_HEAD
@@ -144,37 +136,14 @@ typedef struct {
     float width;
 } PenObject;
 
-static void pen_dealloc(PenObject* self);
-
-static PyTypeObject PenType = {
-    PyVarObject_HEAD_INIT(NULL, 0)
-    "Pen", sizeof(PenObject), 0,
-    /* methods */
-    (destructor) pen_dealloc, /* tp_dealloc */
-    0, /* tp_vectorcall_offset */
-    0, /* tp_getattr */
-    0, /* tp_setattr */
-};
-
-#define Pen_Check(op) ((op) != NULL && Py_TYPE(op) == &PenType)
+#define Pen_Check(op) ((op) != NULL && PyObject_TypeCheck(op, PenType))
 
 typedef struct {
     PyObject_HEAD
     agg::rgba8 color;
 } BrushObject;
 
-static void brush_dealloc(BrushObject* self);
-
-static PyTypeObject BrushType = {
-    PyVarObject_HEAD_INIT(NULL, 0)
-    "Brush", sizeof(BrushObject), 0,
-    /* methods */
-    (destructor) brush_dealloc, /* tp_dealloc */
-    0, /* tp_vectorcall_offset */
-    0, /* tp_getattr */
-    0, /* tp_setattr */
-};
-#define Brush_Check(op) ((op) != NULL && Py_TYPE(op) == &BrushType)
+#define Brush_Check(op) ((op) != NULL && PyObject_TypeCheck(op, BrushType))
 
 typedef struct {
     PyObject_HEAD
@@ -187,48 +156,17 @@ typedef struct {
 static FT_Face font_load(FontObject* font, bool outline=false);
 #endif
 
+/* Defined below the getset block, which the Font spec needs to name first. */
 static void font_dealloc(FontObject* self);
-static PyObject* font_getattro(FontObject* self, PyObject* nameobj);
-static PyTypeObject FontType = {
-    PyVarObject_HEAD_INIT(NULL, 0)
-    "Font", sizeof(FontObject), 0,
-    /* methods */
-    (destructor) font_dealloc, /* tp_dealloc */
-    0, /* tp_vectorcall_offset */
-    0, /* tp_getattr */
-    0, /* tp_setattr */
-    0, /* tp_as_async */
-    0, /* tp_repr */
-    0, /* tp_as_number */
-    0, /* tp_as_sequence */
-    0, /* tp_as_mapping */
-    0, /* tp_hash */
-    0, /* tp_call */
-    0, /* tp_str */
-    (getattrofunc)font_getattro, /* tp_getattro */
-};
 
-#define Font_Check(op) ((op) != NULL && Py_TYPE(op) == &FontType)
+#define Font_Check(op) ((op) != NULL && PyObject_TypeCheck(op, FontType))
 
 typedef struct {
     PyObject_HEAD
     agg::path_storage* path;
 } PathObject;
 
-static void path_dealloc(PathObject* self);
-/* tp_getattro is left unset: PyType_Ready() inherits PyObject_GenericGetAttr
-   from PyBaseObject_Type, which is all Path needs. */
-static PyTypeObject PathType = {
-    PyVarObject_HEAD_INIT(NULL, 0)
-    "Path", sizeof(PathObject), 0,
-    /* methods */
-    (destructor) path_dealloc, /* tp_dealloc */
-    0, /* tp_vectorcall_offset */
-    0, /* tp_getattr */
-    0, /* tp_setattr */
-};
-
-#define Path_Check(op) ((op) != NULL && Py_TYPE(op) == &PathType)
+#define Path_Check(op) ((op) != NULL && PyObject_TypeCheck(op, PathType))
 
 static agg::rgba8 getcolor(PyObject* color, int opacity=255);
 
@@ -496,7 +434,7 @@ const char *draw_doc = "Creates a drawing interface object.\n"
                        "    >>> d = aggdraw.Draw(\"RGB\", (800, 600), \"white\")\n";
 
 static PyObject*
-draw_new(PyObject* self_, PyObject* args)
+draw_new(PyTypeObject* type, PyObject* args, PyObject* kw)
 {
     char buffer[10];
     int ok;
@@ -557,7 +495,7 @@ draw_new(PyObject* self_, PyObject* args)
         image = NULL;
     }
 
-    DrawObject* self = PyObject_NEW(DrawObject, &DrawType);
+    DrawObject* self = (DrawObject*) type->tp_alloc(type, 0);
     if (self == NULL)
         return NULL;
 
@@ -1195,7 +1133,7 @@ draw_path(DrawObject* self, PyObject* args){
     PyObject*   brush = NULL;
     PyObject*   pen   = NULL;
 
-    if (!PyArg_ParseTuple(args, "O!|OO:path", &PathType, &path, &brush, &pen)){
+    if (!PyArg_ParseTuple(args, "O!|OO:path", PathType, &path, &brush, &pen)){
         return NULL;
     }
 
@@ -1237,7 +1175,7 @@ draw_symbol(DrawObject* self, PyObject* args)
     PyObject* brush = NULL;
     PyObject* pen = NULL;
     if (!PyArg_ParseTuple(args, "OO!|OO:symbol",
-                          &xyIn, &PathType, &symbol, &brush, &pen))
+                          &xyIn, PathType, &symbol, &brush, &pen))
         return NULL;
 
     int count;
@@ -1280,7 +1218,7 @@ draw_text(DrawObject* self, PyObject* args)
     PyObject* text;
     FontObject* font;
     if (!PyArg_ParseTuple(args, "(ff)OO!:text", xy+0, xy+1, &text,
-                          &FontType, &font))
+                          FontType, &font))
         return NULL;
 
     self->draw->drawtext(xy, text, font);
@@ -1312,7 +1250,7 @@ draw_textsize(DrawObject* self, PyObject* args)
 {
     PyObject* text;
     FontObject* font;
-    if (!PyArg_ParseTuple(args, "OO!:textsize", &text, &FontType, &font))
+    if (!PyArg_ParseTuple(args, "OO!:textsize", &text, FontType, &font))
         return NULL;
 
     FT_Face face = font_load(font);
@@ -1506,7 +1444,9 @@ draw_dealloc(DrawObject* self)
     Py_XDECREF(self->background);
     Py_XDECREF(self->image);
 
-    PyObject_DEL(self);
+    PyTypeObject* tp = Py_TYPE(self);
+    tp->tp_free((PyObject*) self);
+    Py_DECREF(tp);
 }
 
 static PyMethodDef draw_methods[] = {
@@ -1543,20 +1483,48 @@ static PyMethodDef draw_methods[] = {
 };
 
 static PyObject*
-draw_getattro(DrawObject* self, PyObject* nameobj)
+draw_get_mode(DrawObject* self, void* closure)
 {
-    if (!PyUnicode_Check(nameobj))
-        goto generic;
-
-    if (PyUnicode_CompareWithASCIIString(nameobj, "mode") == 0)
-        return PyUnicode_FromString(self->draw->mode);
-    if (PyUnicode_CompareWithASCIIString(nameobj, "size") == 0)
-        return Py_BuildValue(
-            "(ii)", self->buffer->width(), self->buffer->height()
-            );
-  generic:
-    return PyObject_GenericGetAttr((PyObject*)self, nameobj);
+    /* This is the adaptor's label, not the mode the surface was created with.
+       A BGRA surface is rendered by the RGBA adaptor and so reports "RGBA". */
+    return PyUnicode_FromString(self->draw->mode);
 }
+
+static PyObject*
+draw_get_size(DrawObject* self, void* closure)
+{
+    return Py_BuildValue(
+        "(ii)", self->buffer->width(), self->buffer->height()
+        );
+}
+
+static PyGetSetDef draw_getset[] = {
+    {"mode", (getter) draw_get_mode, NULL,
+     (char*) "str: The mode of the drawing surface, e.g. \"RGB\".", NULL},
+    {"size", (getter) draw_get_size, NULL,
+     (char*) "tuple: The size of the drawing surface as (width, height).", NULL},
+    {NULL}
+};
+
+/* PyType_Slot stores a void*, but the *_doc constants are const char*. */
+#define DOC_SLOT(d) ((void*) const_cast<char*>(d))
+
+static PyType_Slot draw_slots[] = {
+    {Py_tp_new, (void*) draw_new},
+    {Py_tp_dealloc, (void*) draw_dealloc},
+    {Py_tp_methods, (void*) draw_methods},
+    {Py_tp_getset, (void*) draw_getset},
+    {Py_tp_doc, DOC_SLOT(draw_doc)},
+    {0, NULL}
+};
+
+static PyType_Spec draw_spec = {
+    "aggdraw._aggdraw.Draw",
+    sizeof(DrawObject),
+    0,
+    Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE,
+    draw_slots
+};
 
 /* -------------------------------------------------------------------- */
 
@@ -1578,7 +1546,7 @@ const char *pen_doc = "Creates a Pen object.\n"
                       "    Pen opacity. Default 255.\n";
 
 static PyObject*
-pen_new(PyObject* self_, PyObject* args, PyObject* kw)
+pen_new(PyTypeObject* type, PyObject* args, PyObject* kw)
 {
     PenObject* self;
 
@@ -1590,7 +1558,7 @@ pen_new(PyObject* self_, PyObject* args, PyObject* kw)
                                      &color, &width, &opacity))
         return NULL;
 
-    self = PyObject_NEW(PenObject, &PenType);
+    self = (PenObject*) type->tp_alloc(type, 0);
 
     if (self == NULL)
         return NULL;
@@ -1604,8 +1572,48 @@ pen_new(PyObject* self_, PyObject* args, PyObject* kw)
 static void
 pen_dealloc(PenObject* self)
 {
-    PyObject_DEL(self);
+    PyTypeObject* tp = Py_TYPE(self);
+    tp->tp_free((PyObject*) self);
+    Py_DECREF(tp);
 }
+
+static PyObject*
+pen_get_color(PenObject* self, void* closure)
+{
+    return Py_BuildValue(
+        "(BBBB)", self->color.r, self->color.g, self->color.b, self->color.a
+        );
+}
+
+static PyObject*
+pen_get_width(PenObject* self, void* closure)
+{
+    return PyFloat_FromDouble(self->width);
+}
+
+static PyGetSetDef pen_getset[] = {
+    {"color", (getter) pen_get_color, NULL,
+     (char*) "tuple: The pen color, as resolved, in (R, G, B, A) form.", NULL},
+    {"width", (getter) pen_get_width, NULL,
+     (char*) "float: The width of the pen.", NULL},
+    {NULL}
+};
+
+static PyType_Slot pen_slots[] = {
+    {Py_tp_new, (void*) pen_new},
+    {Py_tp_dealloc, (void*) pen_dealloc},
+    {Py_tp_getset, (void*) pen_getset},
+    {Py_tp_doc, DOC_SLOT(pen_doc)},
+    {0, NULL}
+};
+
+static PyType_Spec pen_spec = {
+    "aggdraw._aggdraw.Pen",
+    sizeof(PenObject),
+    0,
+    Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE,
+    pen_slots
+};
 
 /* -------------------------------------------------------------------- */
 
@@ -1625,7 +1633,7 @@ const char *brush_doc = "Creates a brush object.\n"
                         "    Brush opacity. Default 255.\n";
 
 static PyObject*
-brush_new(PyObject* self_, PyObject* args, PyObject* kw)
+brush_new(PyTypeObject* type, PyObject* args, PyObject* kw)
 {
     BrushObject* self;
 
@@ -1636,7 +1644,7 @@ brush_new(PyObject* self_, PyObject* args, PyObject* kw)
                                      &color, &opacity))
         return NULL;
 
-    self = PyObject_NEW(BrushObject, &BrushType);
+    self = (BrushObject*) type->tp_alloc(type, 0);
 
     if (self == NULL)
         return NULL;
@@ -1649,8 +1657,40 @@ brush_new(PyObject* self_, PyObject* args, PyObject* kw)
 static void
 brush_dealloc(BrushObject* self)
 {
-    PyObject_DEL(self);
+    PyTypeObject* tp = Py_TYPE(self);
+    tp->tp_free((PyObject*) self);
+    Py_DECREF(tp);
 }
+
+static PyObject*
+brush_get_color(BrushObject* self, void* closure)
+{
+    return Py_BuildValue(
+        "(BBBB)", self->color.r, self->color.g, self->color.b, self->color.a
+        );
+}
+
+static PyGetSetDef brush_getset[] = {
+    {"color", (getter) brush_get_color, NULL,
+     (char*) "tuple: The brush color, as resolved, in (R, G, B, A) form.", NULL},
+    {NULL}
+};
+
+static PyType_Slot brush_slots[] = {
+    {Py_tp_new, (void*) brush_new},
+    {Py_tp_dealloc, (void*) brush_dealloc},
+    {Py_tp_getset, (void*) brush_getset},
+    {Py_tp_doc, DOC_SLOT(brush_doc)},
+    {0, NULL}
+};
+
+static PyType_Spec brush_spec = {
+    "aggdraw._aggdraw.Brush",
+    sizeof(BrushObject),
+    0,
+    Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE,
+    brush_slots
+};
 
 
 /* -------------------------------------------------------------------- */
@@ -1675,7 +1715,7 @@ const char *font_doc = "Create a font object from a truetype font file for use w
                        "    Font opacity. Default 255.\n";
 
 static PyObject*
-font_new(PyObject* self_, PyObject* args, PyObject* kw)
+font_new(PyTypeObject* type, PyObject* args, PyObject* kw)
 {
     PyObject* color;
     char* filename;
@@ -1687,7 +1727,7 @@ font_new(PyObject* self_, PyObject* args, PyObject* kw)
         return NULL;
 
 #if defined(HAVE_FREETYPE2)
-    FontObject* self = PyObject_NEW(FontObject, &FontType);
+    FontObject* self = (FontObject*) type->tp_alloc(type, 0);
 
     if (self == NULL)
         return NULL;
@@ -1711,10 +1751,6 @@ font_new(PyObject* self_, PyObject* args, PyObject* kw)
 #endif
 }
 
-static PyMethodDef font_methods[] = {
-    {NULL, NULL}
-};
-
 #if defined(HAVE_FREETYPE2)
 static FT_Face
 font_load(FontObject* font, bool outline)
@@ -1733,60 +1769,93 @@ font_load(FontObject* font, bool outline)
 }
 #endif
 
-static PyObject*
-font_getattro(FontObject* self, PyObject* nameobj)
-{
-    if (!PyUnicode_Check(nameobj))
-        goto generic;
-
 #if defined(HAVE_FREETYPE2)
-    FT_Face face;
-    if (PyUnicode_CompareWithASCIIString(nameobj, "family") == 0)
-    {
-        face = font_load(self);
-        if (!face) {
-            Py_INCREF(Py_None);
-            return Py_None;
-        }
-        return PyUnicode_FromString(face->family_name);
+/* Each of these reloads the face: FontObject stores only the filename, and the
+   shared font_engine may have been pointed at a different font since. A face
+   that will not load yields None rather than an exception, as it always has. */
+static PyObject*
+font_get_family(FontObject* self, void* closure)
+{
+    FT_Face face = font_load(self);
+    if (!face) {
+        Py_INCREF(Py_None);
+        return Py_None;
     }
-    if (PyUnicode_CompareWithASCIIString(nameobj, "style") == 0)
-    {
-        face = font_load(self);
-        if (!face) {
-            Py_INCREF(Py_None);
-            return Py_None;
-        }
-        return PyUnicode_FromString(face->style_name);
-    }
-    if (PyUnicode_CompareWithASCIIString(nameobj, "ascent") == 0)
-    {
-        face = font_load(self);
-        if (!face) {
-            Py_INCREF(Py_None);
-            return Py_None;
-        }
-        return PyFloat_FromDouble(face->size->metrics.ascender/64.0);
-    }
-    if (PyUnicode_CompareWithASCIIString(nameobj, "descent") == 0)
-    {
-        face = font_load(self);
-        if (!face) {
-            Py_INCREF(Py_None);
-            return Py_None;
-        }
-        return PyFloat_FromDouble(-face->size->metrics.descender/64.0);
-    }
-#endif
-  generic:
-    return PyObject_GenericGetAttr((PyObject*)self, nameobj);
+    return PyUnicode_FromString(face->family_name);
 }
+
+static PyObject*
+font_get_style(FontObject* self, void* closure)
+{
+    FT_Face face = font_load(self);
+    if (!face) {
+        Py_INCREF(Py_None);
+        return Py_None;
+    }
+    return PyUnicode_FromString(face->style_name);
+}
+
+static PyObject*
+font_get_ascent(FontObject* self, void* closure)
+{
+    FT_Face face = font_load(self);
+    if (!face) {
+        Py_INCREF(Py_None);
+        return Py_None;
+    }
+    return PyFloat_FromDouble(face->size->metrics.ascender/64.0);
+}
+
+static PyObject*
+font_get_descent(FontObject* self, void* closure)
+{
+    FT_Face face = font_load(self);
+    if (!face) {
+        Py_INCREF(Py_None);
+        return Py_None;
+    }
+    return PyFloat_FromDouble(-face->size->metrics.descender/64.0);
+}
+#endif
+
+static PyGetSetDef font_getset[] = {
+#if defined(HAVE_FREETYPE2)
+    {"family", (getter) font_get_family, NULL,
+     (char*) "str: The font family name reported by FreeType.", NULL},
+    {"style", (getter) font_get_style, NULL,
+     (char*) "str: The font style name reported by FreeType.", NULL},
+    {"ascent", (getter) font_get_ascent, NULL,
+     (char*) "float: The font ascent, in pixels.", NULL},
+    {"descent", (getter) font_get_descent, NULL,
+     (char*) "float: The font descent, in pixels, as a positive number.", NULL},
+#endif
+    {NULL}
+};
+
+static PyType_Slot font_slots[] = {
+    {Py_tp_new, (void*) font_new},
+    {Py_tp_dealloc, (void*) font_dealloc},
+    {Py_tp_getset, (void*) font_getset},
+    {Py_tp_doc, DOC_SLOT(font_doc)},
+    {0, NULL}
+};
+
+static PyType_Spec font_spec = {
+    "aggdraw._aggdraw.Font",
+    sizeof(FontObject),
+    0,
+    Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE,
+    font_slots
+};
 
 static void
 font_dealloc(FontObject* self)
 {
     delete [] self->filename;
-    PyObject_DEL(self);
+
+    PyTypeObject* tp = Py_TYPE(self);
+    tp->tp_free((PyObject*) self);
+    Py_DECREF(tp);
 }
 
 /* -------------------------------------------------------------------- */
@@ -1801,13 +1870,13 @@ const char *path_doc = "Path factory (experimental).\n"
                        "    line segment to each remaining pair.\n";
 
 static PyObject*
-path_new(PyObject* self_, PyObject* args)
+path_new(PyTypeObject* type, PyObject* args, PyObject* kw)
 {
     PyObject* xyIn = NULL;
     if (!PyArg_ParseTuple(args, "|O:Path", &xyIn))
         return NULL;
 
-    PathObject* self = PyObject_NEW(PathObject, &PathType);
+    PathObject* self = (PathObject*) type->tp_alloc(type, 0);
 
     if (self == NULL)
         return NULL;
@@ -1818,7 +1887,7 @@ path_new(PyObject* self_, PyObject* args)
         int count;
         PointF *xy = getpoints(xyIn, &count);
         if (!xy) {
-            path_dealloc(self);
+            Py_DECREF(self);
             return NULL;
         }
         self->path->move_to(xy[0].X, xy[0].Y);
@@ -1852,7 +1921,7 @@ symbol_new(PyObject* self_, PyObject* args)
     if (!PyArg_ParseTuple(args, "s|f:Symbol", &path, &scale))
         return NULL;
 
-    PathObject* self = PyObject_NEW(PathObject, &PathType);
+    PathObject* self = (PathObject*) PathType->tp_alloc(PathType, 0);
 
     if (self == NULL)
         return NULL;
@@ -2290,7 +2359,10 @@ static void
 path_dealloc(PathObject* self)
 {
     delete self->path;
-    PyObject_DEL(self);
+
+    PyTypeObject* tp = Py_TYPE(self);
+    tp->tp_free((PyObject*) self);
+    Py_DECREF(tp);
 }
 
 static PyMethodDef path_methods[] = {
@@ -2311,15 +2383,29 @@ static PyMethodDef path_methods[] = {
     {NULL, NULL}
 };
 
+static PyType_Slot path_slots[] = {
+    {Py_tp_new, (void*) path_new},
+    {Py_tp_dealloc, (void*) path_dealloc},
+    {Py_tp_methods, (void*) path_methods},
+    {Py_tp_doc, DOC_SLOT(path_doc)},
+    {0, NULL}
+};
+
+static PyType_Spec path_spec = {
+    "aggdraw._aggdraw.Path",
+    sizeof(PathObject),
+    0,
+    Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE,
+    path_slots
+};
+
 /* -------------------------------------------------------------------- */
 
+/* Pen, Brush, Font, Path and Draw are types, added to the module in
+   aggdraw_init. Symbol stays a factory function because it returns a Path --
+   Symbol and Path have always been the same C type. */
 static PyMethodDef aggdraw_functions[] = {
-    {"Pen", (PyCFunction) pen_new, METH_VARARGS|METH_KEYWORDS, pen_doc},
-    {"Brush", (PyCFunction) brush_new, METH_VARARGS|METH_KEYWORDS, brush_doc},
-    {"Font", (PyCFunction) font_new, METH_VARARGS|METH_KEYWORDS, font_doc},
     {"Symbol", (PyCFunction) symbol_new, METH_VARARGS, symbol_doc},
-    {"Path", (PyCFunction) path_new, METH_VARARGS, path_doc},
-    {"Draw", (PyCFunction) draw_new, METH_VARARGS, draw_doc},
     {NULL, NULL}
 };
 
@@ -2363,39 +2449,42 @@ static struct PyModuleDef moduledef = {
 static PyObject *
 aggdraw_init(void)
 {
-    /* tp_methods must be assigned before PyType_Ready: PyType_Ready copies
-       tp_methods into tp_dict once and never looks at it again. (The arrays
-       are defined further down the file, and C++ has no tentative
-       definitions, so they cannot be named from the static initializers.)
-       Pen and Brush expose no methods. */
-    DrawType.tp_methods = draw_methods;
-    FontType.tp_methods = font_methods;
-    PathType.tp_methods = path_methods;
-
-    DrawType.tp_flags = Py_TPFLAGS_DEFAULT;
-    PenType.tp_flags = Py_TPFLAGS_DEFAULT;
-    BrushType.tp_flags = Py_TPFLAGS_DEFAULT;
-    FontType.tp_flags = Py_TPFLAGS_DEFAULT;
-    PathType.tp_flags = Py_TPFLAGS_DEFAULT;
-
-    /* Without this the types keep a NULL ob_type and type(obj) crashes.
-       Note: Py_TPFLAGS_BASETYPE is deliberately NOT set -- the deallocators
-       call PyObject_DEL directly rather than going through tp_free, which is
-       only safe as long as these types cannot be subclassed. */
-    if (PyType_Ready(&DrawType) < 0)
-        return NULL;
-    if (PyType_Ready(&PenType) < 0)
-        return NULL;
-    if (PyType_Ready(&BrushType) < 0)
-        return NULL;
-    if (PyType_Ready(&FontType) < 0)
-        return NULL;
-    if (PyType_Ready(&PathType) < 0)
-        return NULL;
-
     PyObject *module = PyModule_Create(&moduledef);
     if (module == NULL)
         return NULL;
+
+    /* Build the five types from their specs and expose them as real classes.
+       PyType_FromSpec fills in ob_type, so type() and help() work; each spec
+       names its own tp_new, so the types are directly constructible and
+       Py_TPFLAGS_BASETYPE lets them be subclassed. The deallocators go through
+       tp_free and drop a reference on the type, as heap types require. */
+    static const struct {
+        PyType_Spec* spec;
+        PyTypeObject** slot;
+        const char* name;
+    } types[] = {
+        {&draw_spec, &DrawType, "Draw"},
+        {&pen_spec, &PenType, "Pen"},
+        {&brush_spec, &BrushType, "Brush"},
+        {&font_spec, &FontType, "Font"},
+        {&path_spec, &PathType, "Path"},
+    };
+
+    for (size_t i = 0; i < sizeof(types)/sizeof(types[0]); i++) {
+        PyObject* type = PyType_FromSpec(types[i].spec);
+        if (type == NULL) {
+            Py_DECREF(module);
+            return NULL;
+        }
+        *types[i].slot = (PyTypeObject*) type;
+        if (PyModule_AddObjectRef(module, types[i].name, type) < 0) {
+            Py_DECREF(type);
+            Py_DECREF(module);
+            return NULL;
+        }
+        /* The module holds its own reference; the file-scope pointer above
+           keeps one for the C code's own type checks. */
+    }
 
     PyObject *version = PyUnicode_FromString(QUOTE(VERSION));
     if (version == NULL) {

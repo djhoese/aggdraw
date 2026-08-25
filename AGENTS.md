@@ -20,8 +20,18 @@ aggdraw/__init__.py       re-exports Draw, Pen, Brush, Path, Symbol, Font + VERS
 ```
 
 - `aggdraw/_aggdraw.cxx` (~2500 lines) uses the low-level Python C API. `Pen`, `Brush`, `Font`,
-  `Symbol`, `Path`, and `Draw` are exposed as module-level **factory functions**, not heap
-  types — there is no `tp_new` and no subclassing.
+  `Path`, and `Draw` are **heap types**, built with `PyType_FromSpec` in `aggdraw_init` and
+  exposed on the module as real, subclassable classes. Each type's `PyType_Spec` sits next to
+  that type's own methods. Two consequences to respect:
+  - The deallocators must go through `tp_free` and then `Py_DECREF(Py_TYPE(self))`. Never call
+    `PyObject_DEL` on one of these objects, and never call a `*_dealloc` directly — use
+    `Py_DECREF`.
+  - The `Pen_Check` / `Brush_Check` / `Font_Check` / `Path_Check` macros use `PyObject_TypeCheck`,
+    not an identity test, because `Py_TPFLAGS_BASETYPE` is set. An identity test would make
+    `draw_adaptor::draw` silently ignore a subclass.
+- **`Symbol` is still a module-level factory function**, and is the only one left. It returns a
+  `Path` — `Symbol` and `Path` have always been the same C type — which is why `core.Symbol`
+  stores its handle as `self._path` rather than `self._symbol`.
 - `aggdraw/core.py` is a recent addition. Each wrapper class holds a handle to the C object
   (`self._pen`, `self._brush`, `self._font`, `self._path`, `self._draw`) and forwards calls.
   Its purpose is documentation, IDE discoverability, and a place to put Python-side niceties.
