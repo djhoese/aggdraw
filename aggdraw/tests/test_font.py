@@ -18,16 +18,33 @@ FONT_DIRS = [
 ]
 
 
+# Fonts known to carry Latin glyphs, most preferred first. Taking the first .ttf in
+# Other available fonts may not have expected glyph shapes/sizes so would fail tests.
+PREFERRED_FONTS = (
+    "DejaVuSans.ttf",  # most linux distros, conda envs
+    "LiberationSans-Regular.ttf",  # fedora/rhel, ubuntu
+    "FreeSans.ttf",  # gnu freefont
+    "NotoSans-Regular.ttf",
+    "Arial.ttf",  # macos /System/Library/Fonts/Supplemental, msttcorefonts
+    "arial.ttf",  # windows
+    "Verdana.ttf",
+    "verdana.ttf",
+)
+
+
 def _find_font():
-    """Return the path of any TrueType font on this machine, or None.
+    """Return the path of a TrueType font with Latin glyphs, or None.
 
     aggdraw ships no font of its own and Pillow's default font is not a file
     on disk, so there is nothing portable to point Font() at.
     """
+    found = {}
     for directory in FONT_DIRS:
-        matches = sorted(glob.glob(os.path.join(directory, "**", "*.ttf"), recursive=True))
-        if matches:
-            return matches[0]
+        for path in glob.glob(os.path.join(directory, "**", "*.ttf"), recursive=True):
+            found.setdefault(os.path.basename(path), path)
+    for name in PREFERRED_FONTS:
+        if name in found:
+            return found[name]
     return None
 
 
@@ -37,7 +54,7 @@ def _font_or_skip(color="black", size=12):
         pytest.skip("built without FreeType, so there is no text renderer")
     path = _find_font()
     if path is None:
-        pytest.skip("no TrueType font found on this machine")
+        pytest.skip("no suitable TrueType font found on this machine")
     return aggdraw.Font(color, path, size)
 
 

@@ -317,6 +317,7 @@ public:
         int index = 0;
 
         while (text_getchar(text, index, &ch)) {
+            index++;
             const agg::glyph_cache* glyph;
             glyph = font_manager.glyph(ch);
             if (!glyph)
@@ -340,7 +341,6 @@ public:
             }
             x += glyph->advance_x;
             y += glyph->advance_y;
-            index++;
         }
     }
 #endif
