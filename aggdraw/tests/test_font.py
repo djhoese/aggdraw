@@ -3,10 +3,11 @@
 import glob
 import os
 
+import numpy as np
 import pytest
 
 import aggdraw
-from aggdraw.tests._helpers import WHITE, ink_count, to_image
+from aggdraw.tests._helpers import WHITE, to_image
 
 
 FONT_DIRS = [
@@ -85,12 +86,12 @@ def test_font_draws_text():
     assert height > 0
 
     surf.text((5, 5), "Hello", font)
-    im = to_image(surf)
-    assert ink_count(im) > 0
-    # every inked pixel is some blend of red over white
-    for x in range(im.width):
-        for y in range(im.height):
-            r, g, b = im.getpixel((x, y))
-            if (r, g, b) != WHITE:
-                assert g == b
-                assert r >= g
+    arr = np.asarray(to_image(surf))
+    ink = arr[np.any(arr != WHITE, axis=-1)]
+
+    # were any red pixels drawn?
+    assert np.any(np.all(ink == (255, 0, 0), axis=-1))
+    # AGG blends coverage over the background, so red over white is always
+    # (255, 255 - k, 255 - k): the red channel saturates and green tracks blue
+    assert np.all(ink[:, 0] == 255)
+    assert np.all(ink[:, 1] == ink[:, 2])
