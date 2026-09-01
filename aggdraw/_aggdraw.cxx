@@ -117,14 +117,16 @@ typedef struct {
 /* glue functions (see the init function for details) */
 static PyObject* aggdraw_getcolor_obj;
 
-/* All five types are heap types, created with PyType_FromSpec in aggdraw_init
+/* All six types are heap types, created with PyType_FromSpec in aggdraw_init
    and exposed on the module as real classes. Each PyType_Spec is defined next
-   to that type's own methods, further down the file. */
+   to that type's own methods, further down the file. Symbol is a subclass of
+   Path, so it is built with PyType_FromSpecWithBases instead. */
 static PyTypeObject* DrawType;
 static PyTypeObject* PenType;
 static PyTypeObject* BrushType;
 static PyTypeObject* FontType;
 static PyTypeObject* PathType;
+static PyTypeObject* SymbolType;
 
 /* The _Check macros use PyObject_TypeCheck rather than an identity test: the
    types set Py_TPFLAGS_BASETYPE, and an identity test would make
@@ -1129,7 +1131,8 @@ const char *draw_path_doc = "Draw the given path.\n"
                             "Parameters\n"
                             "----------\n"
                             "path : Path\n"
-                            "    Path object created by the `Path` factory.\n"
+                            "    The path to draw. A `Symbol` is a `Path`, so either is\n"
+                            "    accepted.\n"
                             "brush : Brush, optional\n"
                             "    Optional brush object created by the `Brush` factory.\n"
                             "pen : Pen, optional\n"
@@ -1168,8 +1171,9 @@ const char *draw_symbol_doc = "Draw a symbol at the given positions (experimenta
                               "----------\n"
                               "xy : iterable\n"
                               "    A Python sequence (x, y, x, y, …).\n"
-                              "symbol : Symbol\n"
-                              "    Symbol object created by the `Symbol` factory.\n"
+                              "symbol : Path\n"
+                              "    The path to stamp at each position. Any `Path` works; a\n"
+                              "    `Symbol` is a `Path`, so either is accepted.\n"
                               "brush : Brush, optional\n"
                               "    Optional brush object created by the `Brush` factory.\n"
                               "pen : Pen, optional\n"
@@ -1868,7 +1872,7 @@ font_dealloc(FontObject* self)
 
 /* -------------------------------------------------------------------- */
 
-const char *path_doc = "Path factory (experimental).\n"
+const char *path_doc = "Create a Path object (experimental).\n"
                        "\n"
                        "Parameters\n"
                        "----------\n"
@@ -1912,29 +1916,16 @@ path_new(PyTypeObject* type, PyObject* args, PyObject* kw)
     return (PyObject*) self;
 }
 
-const char *symbol_doc = "Create a Symbol object for use with :meth:`Draw.symbol`.\n"
-                         "\n"
-                         "Parameters\n"
-                         "----------\n"
-                         "path : str\n"
-                         "    An SVG-style path descriptor. The following operators\n"
-                         "    are supported: M (move), L (line), H (horizontal line), V (vertical line),\n"
-                         "    C (cubic bezier), S (smooth cubic bezier), Q (quadratic bezier),\n"
-                         "    T (smooth quadratic bezier), and Z (close path). Use lower-case\n"
-                         "    operators for relative coordinates, upper-case for absolute coordinates.\n"
-                         "scale : float, optional\n"
-                         "    A multiplier applied to every coordinate in the path descriptor\n"
-                         "    as it is parsed. Default 1.0.\n";
+/* Defined below, with the rest of the Path helpers. */
+void expandPaths(PathObject* self);
 
+/* The SVG-descriptor parser shared by Path.from_svg() and Symbol(). `type` is
+   PathType, SymbolType, or a Python subclass of either; allocating through
+   type->tp_alloc gives the caller an instance of the class it asked for. */
 static PyObject*
-symbol_new(PyObject* self_, PyObject* args)
+path_from_svg_impl(PyTypeObject* type, char* path, float scale)
 {
-    char* path;
-    float scale = 1.0;
-    if (!PyArg_ParseTuple(args, "s|f:Symbol", &path, &scale))
-        return NULL;
-
-    PathObject* self = (PathObject*) PathType->tp_alloc(PathType, 0);
+    PathObject* self = (PathObject*) type->tp_alloc(type, 0);
 
     if (self == NULL)
         return NULL;
@@ -2100,16 +2091,46 @@ symbol_new(PyObject* self_, PyObject* args)
         }
     }
 
-    if (curve) {
-        /* expand curves */
-        agg::path_storage* path = self->path;
-        agg::conv_curve<agg::path_storage> curve(*path);
-        self->path = new agg::path_storage();
-        self->path->add_path(curve, 0, false);
-        delete path;
-    }
+    if (curve)
+        expandPaths(self);
 
     return (PyObject*) self;
+}
+
+const char *path_from_svg_doc = "Create a path from an SVG-style path descriptor.\n"
+                                "\n"
+                                "This is a classmethod, so calling it on a subclass returns an\n"
+                                "instance of that subclass. It builds the object directly and does\n"
+                                "not go through the class's own constructor.\n"
+                                "\n"
+                                "Parameters\n"
+                                "----------\n"
+                                "path : str\n"
+                                "    An SVG-style path descriptor. The following operators\n"
+                                "    are supported: M (move), L (line), H (horizontal line), V (vertical line),\n"
+                                "    C (cubic bezier), S (smooth cubic bezier), Q (quadratic bezier),\n"
+                                "    T (smooth quadratic bezier), and Z (close path). Use lower-case\n"
+                                "    operators for relative coordinates, upper-case for absolute coordinates.\n"
+                                "scale : float, optional\n"
+                                "    A multiplier applied to every coordinate in the path descriptor\n"
+                                "    as it is parsed. Default 1.0.\n"
+                                "\n"
+                                "Returns\n"
+                                "-------\n"
+                                "Path\n"
+                                "    A new instance of the class this was called on.\n";
+
+static PyObject*
+path_from_svg(PyObject* cls, PyObject* args)
+{
+    char* path;
+    float scale = 1.0;
+    if (!PyArg_ParseTuple(args, "s|f:from_svg", &path, &scale))
+        return NULL;
+
+    /* The classmethod descriptor has already checked that cls is a subtype of
+       Path, so path_from_svg_impl can allocate from it unconditionally. */
+    return path_from_svg_impl((PyTypeObject*) cls, path, scale);
 }
 
 void expandPaths(PathObject *self)
@@ -2380,6 +2401,9 @@ path_dealloc(PathObject* self)
 
 static PyMethodDef path_methods[] = {
 
+    {"from_svg", (PyCFunction) path_from_svg,
+     METH_VARARGS | METH_CLASS, path_from_svg_doc},
+
     {"lineto", (PyCFunction) path_lineto, METH_VARARGS, path_lineto_doc},
     {"rlineto", (PyCFunction) path_rlineto, METH_VARARGS, path_rlineto_doc},
     {"curveto", (PyCFunction) path_curveto, METH_VARARGS, path_curveto_doc},
@@ -2414,13 +2438,62 @@ static PyType_Spec path_spec = {
 
 /* -------------------------------------------------------------------- */
 
-/* Pen, Brush, Font, Path and Draw are types, added to the module in
-   aggdraw_init. Symbol stays a factory function because it returns a Path --
-   Symbol and Path have always been the same C type. */
-static PyMethodDef aggdraw_functions[] = {
-    {"Symbol", (PyCFunction) symbol_new, METH_VARARGS, symbol_doc},
-    {NULL, NULL}
+const char *symbol_doc = "Deprecated alias for :meth:`Path.from_svg`.\n"
+                         "\n"
+                         "A Symbol is a Path built from an SVG-style path descriptor rather\n"
+                         "than from a coordinate sequence. It adds no state and no methods of\n"
+                         "its own; use Path.from_svg(path, scale) instead. The documented\n"
+                         "aggdraw.Symbol wrapper warns when one is constructed.\n"
+                         "\n"
+                         "Parameters\n"
+                         "----------\n"
+                         "path : str\n"
+                         "    An SVG-style path descriptor; see Path.from_svg for the\n"
+                         "    supported operators.\n"
+                         "scale : float, optional\n"
+                         "    A multiplier applied to every coordinate in the path descriptor\n"
+                         "    as it is parsed. Default 1.0.\n";
+
+static PyObject*
+symbol_new(PyTypeObject* type, PyObject* args, PyObject* kw)
+{
+    /* tp_new is handed keywords whether or not it wants them. The old
+       METH_VARARGS entry point rejected them for free; keep doing so rather
+       than silently ignoring Symbol("M0,0", scale=2). */
+    if (kw != NULL && PyDict_GET_SIZE(kw) != 0) {
+        PyErr_SetString(PyExc_TypeError, "Symbol() takes no keyword arguments");
+        return NULL;
+    }
+
+    char* path;
+    float scale = 1.0;
+    if (!PyArg_ParseTuple(args, "s|f:Symbol", &path, &scale))
+        return NULL;
+
+    return path_from_svg_impl(type, path, scale);
+}
+
+/* tp_dealloc, tp_methods, tp_alloc and tp_free are all inherited from Path.
+   path_dealloc reads Py_TYPE(self) rather than a hardcoded type, so it is
+   already correct for a subtype, and Symbol adds no fields to PathObject --
+   hence the basicsize below. Do not add tp_methods here: that would build a
+   second set of descriptors bound to SymbolType, and Symbol.lineto() would
+   then reject a plain Path. tp_doc is not inherited, so it must be given. */
+static PyType_Slot symbol_slots[] = {
+    {Py_tp_new, (void*) symbol_new},
+    {Py_tp_doc, DOC_SLOT(symbol_doc)},
+    {0, NULL}
 };
+
+static PyType_Spec symbol_spec = {
+    "aggdraw._aggdraw.Symbol",
+    sizeof(PathObject),
+    0,
+    Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE,
+    symbol_slots
+};
+
+/* -------------------------------------------------------------------- */
 
 const char *mod_doc = "Python interface to the Anti-Grain Graphics Drawing library\n"
                       "\n"
@@ -2451,7 +2524,7 @@ static struct PyModuleDef moduledef = {
         "_aggdraw",
         mod_doc,
         -1,
-        aggdraw_functions,
+        NULL,       /* m_methods: every name in this module is a type */
         NULL,
         NULL,
         NULL,
@@ -2466,25 +2539,44 @@ aggdraw_init(void)
     if (module == NULL)
         return NULL;
 
-    /* Build the five types from their specs and expose them as real classes.
+    /* Build the six types from their specs and expose them as real classes.
        PyType_FromSpec fills in ob_type, so type() and help() work; each spec
        names its own tp_new, so the types are directly constructible and
        Py_TPFLAGS_BASETYPE lets them be subclassed. The deallocators go through
-       tp_free and drop a reference on the type, as heap types require. */
+       tp_free and drop a reference on the type, as heap types require.
+
+       A row naming a base gets it through PyType_FromSpecWithBases rather than
+       a Py_tp_base slot, because the base is itself a heap type that does not
+       exist until this loop creates it -- a static slot array cannot name it.
+       PyType_FromSpecWithBases(spec, NULL) is exactly PyType_FromSpec(spec),
+       so the rows without a base are unaffected. */
     static const struct {
         PyType_Spec* spec;
         PyTypeObject** slot;
         const char* name;
+        PyTypeObject** base;    /* NULL for a direct subclass of object */
     } types[] = {
-        {&draw_spec, &DrawType, "Draw"},
-        {&pen_spec, &PenType, "Pen"},
-        {&brush_spec, &BrushType, "Brush"},
-        {&font_spec, &FontType, "Font"},
-        {&path_spec, &PathType, "Path"},
+        {&draw_spec, &DrawType, "Draw", NULL},
+        {&pen_spec, &PenType, "Pen", NULL},
+        {&brush_spec, &BrushType, "Brush", NULL},
+        {&font_spec, &FontType, "Font", NULL},
+        {&path_spec, &PathType, "Path", NULL},
+        /* Ordering matters: a row naming a base must come after the row that
+           creates it, since the base is read from *types[i].base right here. */
+        {&symbol_spec, &SymbolType, "Symbol", &PathType},
     };
 
     for (size_t i = 0; i < sizeof(types)/sizeof(types[0]); i++) {
-        PyObject* type = PyType_FromSpec(types[i].spec);
+        PyObject* bases = NULL;
+        if (types[i].base != NULL) {
+            bases = Py_BuildValue("(O)", (PyObject*) *types[i].base);
+            if (bases == NULL) {
+                Py_DECREF(module);
+                return NULL;
+            }
+        }
+        PyObject* type = PyType_FromSpecWithBases(types[i].spec, bases);
+        Py_XDECREF(bases);  /* the new type holds its own reference */
         if (type == NULL) {
             Py_DECREF(module);
             return NULL;

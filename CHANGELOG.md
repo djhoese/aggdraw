@@ -35,11 +35,25 @@
   the PIL image; the reference is now taken at the point of assignment.
 - The dictionary backing the internal color-resolution helper is no longer
   leaked at import.
-- `Pen`, `Brush`, `Font`, `Path` and `Draw` in the C extension are now real
-  classes rather than factory functions returning opaque objects. They are
+- `Pen`, `Brush`, `Font`, `Path`, `Symbol` and `Draw` in the C extension are now
+  real classes rather than factory functions returning opaque objects. They are
   heap types built with `PyType_FromSpec`, exposed on `aggdraw._aggdraw` as
-  types, and can be subclassed. `Symbol` remains a factory function because it
-  returns a `Path`.
+  types, and can be subclassed. `aggdraw._aggdraw` no longer exposes any
+  module-level functions.
+- New: `Path.from_svg(path, scale=1.0)` builds a path from an SVG-style path
+  descriptor. This is the canonical replacement for `Symbol`. It is a
+  classmethod, so calling it on a subclass returns an instance of that subclass.
+- **Deprecated:** `aggdraw.Symbol`. Constructing one now emits a `UserWarning`;
+  use `aggdraw.Path.from_svg()` instead. `UserWarning` rather than
+  `DeprecationWarning` so that it is visible by default. See
+  [#145](https://github.com/pytroll/aggdraw/issues/145).
+- **Breaking:** `Symbol` is now a subclass of `Path` in both the Python wrapper
+  and the C extension, rather than a factory function that returned a `Path`.
+  `isinstance(Symbol(...), Path)` is now `True`; a `Symbol` has all the `Path`
+  methods (`lineto`, `coords`, ...), where previously it had none; `Draw.line`
+  and `Draw.polygon` now accept a `Symbol`, having rejected it with a
+  `TypeError` from their `isinstance` guard; and `type()` of the underlying
+  `aggdraw._aggdraw.Symbol` object is now `Symbol` rather than `Path`.
 - New: `Pen.color`, `Pen.width` and `Brush.color` report the resolved color and
   width. The color is given as `(R, G, B, A)` after parsing, so an unrecognized
   color reads back as black.
